@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude / ruflo local runtime files
+.claude-flow/
+CLAUDE.local.md

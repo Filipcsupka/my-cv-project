@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# filip-cv
 
-## Getting Started
+Personal CV/portfolio site for Filip Csupka — DevOps / SRE / Kubernetes Engineer.
 
-First, run the development server:
+Built with Next.js 15 static export, served by nginx alpine inside a Docker container. Deployed on a Hetzner K8s cluster via Cloudflare Tunnel. Live cluster metrics are pulled at deploy time by a K8s init container and served as `/status.json`.
+
+---
+
+## Stack
+
+| Layer | Tech |
+| --- | --- |
+| Frontend | Next.js 15, React 19, Tailwind CSS v4, TypeScript |
+| Fonts | Orbitron (display), JetBrains Mono (mono) |
+| Build output | Static export (`out/`) |
+| Server | nginx 1.27 alpine |
+| Container | Docker multi-stage build |
+| CI/CD | GitHub Actions → GHCR |
+| Deployment | Kubernetes (Hetzner) + Cloudflare Tunnel |
+
+---
+
+## Local development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App runs at [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Docker
 
-## Learn More
+**Build:**
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+docker build --build-arg APP_VERSION=1.0.0 -t filip-cv:1.0.0 .
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Run:**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+docker compose up
+# → http://localhost:8080
+```
 
-## Deploy on Vercel
+**Version** is injected at build time via `--build-arg APP_VERSION=x.x.x` and baked into the static HTML as `NEXT_PUBLIC_APP_VERSION`. CI passes the git tag automatically.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## CI/CD
+
+GitHub Actions workflow at `.github/workflows/build.yml`:
+
+| Trigger | Action |
+| --- | --- |
+| Push to `main` | Lint → build → push `latest` to GHCR, auto-bump patch tag |
+| Push tag `v*.*.*` | Lint → build → push versioned tags to GHCR |
+| Pull request | Lint → build only (no push) |
+
+Image is published to `ghcr.io/filipcsupka/filip-cv`.
+
+**First-time setup** — add write permission for GHCR in your repo settings:
+`Settings → Actions → General → Workflow permissions → Read and write`
+
+---
+
+## Live cluster metrics
+
+When deployed on K8s, an init container queries the cluster API before nginx starts and writes `/status.json` into the nginx html root. The frontend fetches it on load and displays real node/pod/namespace counts.
+
+Requires the RBAC manifests from the `../infra` repo to be applied first:
+
+```bash
+kubectl apply -f infra/k8s/rbac.yaml
+```
+
+On localhost the metrics section shows `—` with a `deploy to K8s for live metrics` hint.
+
+---
+
+## Project structure
+
+```text
+my-cv-project/
+├── src/
+│   ├── app/
+│   │   ├── page.tsx              # Main page — hero, stack, experience, contact
+│   │   ├── layout.tsx            # Fonts, metadata
+│   │   └── globals.css           # Design tokens, animations
+│   └── components/
+│       ├── CV.tsx                # Experience timeline, skill bars
+│       └── BackgroundCanvas.tsx  # Animated K8s topology canvas
+├── nginx/
+│   └── nginx.conf                # gzip, cache headers, Cloudflare real IP, /healthz
+├── Dockerfile                    # Multi-stage: node:20-alpine → nginx:1.27-alpine
+├── docker-compose.yml            # Local container testing
+└── .github/
+    └── workflows/
+        └── build.yml             # CI: lint → build → push to GHCR
+```
+
+Infrastructure (K8s manifests, Cloudflare tunnel) lives in the separate `../infra` repo.
+
+---
+
+## Infra repo
+
+K8s deployment, RBAC, and Cloudflare Tunnel config are managed separately in `../infra`. Will be migrated to GitOps (ArgoCD) + Terraform for full declarative cluster provisioning.

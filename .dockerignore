@@ -1,0 +1,37 @@
+# Version control
+.git
+.gitignore
+
+# Dependencies (installed fresh in Docker)
+node_modules
+
+# Build output (rebuilt in Docker)
+.next
+out
+
+# Dev / local
+.env*.local
+*.log
+npm-debug.log*
+
+# Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# CI / docs
+.github
+*.md
+!README.md
+
+# ruflo / claude
+.claude
+.claude-flow
+.mcp.json
+CLAUDE.md
+CLAUDE.local.md

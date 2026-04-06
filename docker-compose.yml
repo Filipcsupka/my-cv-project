@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  cv:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: "${APP_VERSION:-dev}"
+    image: filip-cv:${APP_VERSION:-dev}
+    container_name: filip-cv
+    ports:
+      - "8080:8080"
+    environment:
+      - NGINX_HOST=localhost
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/log/nginx
+      - /var/run
