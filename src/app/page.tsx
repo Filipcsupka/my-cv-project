@@ -87,39 +87,32 @@ const NAV = [
   { label: "contact",    href: "#contact" },
 ];
 
-/* ─── Cluster status (fetched from /status.json on K8s) ─── */
-interface ClusterStatus {
-  nodes: number;
-  readyNodes: number;
-  pods: number;
-  runningPods: number;
-  namespaces: number;
-  deployments: number;
-  k8sVersion: string;
-  timestamp: string;
-  live: boolean;
-}
 
-const FALLBACK_STATUS: ClusterStatus = {
-  nodes: 0, readyNodes: 0, pods: 0, runningPods: 0,
-  namespaces: 0, deployments: 0, k8sVersion: "—",
-  timestamp: "", live: false,
-};
+/* ─── Deploy stack tiles (static + optional k8s version) ─── */
+const DEPLOY_STACK = [
+  { label: "Kubernetes",     value: null,       sub: "orchestration",     role: "container runtime",   color: "#326CE5" },
+  { label: "ArgoCD",         value: "GitOps",   sub: "deployment",        role: "app delivery",        color: "#EF7B4D" },
+  { label: "Terraform",      value: "IaC",      sub: "infrastructure",    role: "cloud provisioning",  color: "#7B42BC" },
+  { label: "GitHub Actions", value: "CI/CD",    sub: "automation",        role: "build & deploy",      color: "#e2eaf4" },
+  { label: "Hetzner",        value: "Cloud",    sub: "compute",           role: "machine infra",       color: "#d50c2d" },
+  { label: "Docker",         value: "alpine",   sub: "container",         role: "image build",         color: "#2496ED" },
+  { label: "Claude + Ruflo", value: "AI",       sub: "frontend",          role: "UI design & code",    color: "#00ff88" },
+];
 
 /* ─── Component ──────────────────────────────────────────── */
 export default function Home() {
   const role = useTypingEffect(ROLES);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("hero");
-  const [clusterStatus, setClusterStatus] = useState<ClusterStatus>(FALLBACK_STATUS);
+  const [k8sVersion, setK8sVersion] = useState<string>("—");
   const heroRef = useRef<HTMLDivElement>(null);
 
-  /* fetch live cluster status written by init container */
+  /* fetch k8s version written by init container at pod start */
   useEffect(() => {
     fetch("/status.json")
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setClusterStatus(data); })
-      .catch(() => {}); // silently fall back to static values
+      .then((data) => { if (data?.k8sVersion) setK8sVersion(data.k8sVersion); })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -158,25 +151,7 @@ export default function Home() {
       {/* ── Animated K8s topology background ──────���──────── */}
       <BackgroundCanvas />
 
-      {/* ── Version badge ─────────────────────────────────── */}
-      <div
-        style={{
-          position: "fixed",
-          top: "12px",
-          right: "16px",
-          zIndex: 100,
-          background: "rgba(0,212,255,0.08)",
-          border: "1px solid rgba(0,212,255,0.25)",
-          borderRadius: "4px",
-          padding: "2px 10px",
-          fontSize: "11px",
-          color: "var(--accent-cyan)",
-          fontFamily: "var(--font-jetbrains), monospace",
-          letterSpacing: "0.05em",
-        }}
-      >
-        v{APP_VERSION}
-      </div>
+
 
       {/* ── Sticky nav ────────────────────────────────────── */}
       <nav
@@ -270,7 +245,7 @@ export default function Home() {
           textAlign: "center",
         }}
       >
-        {/* Cluster status line */}
+        {/* Status line */}
         <div
           className="fade-in"
           style={{
@@ -281,8 +256,6 @@ export default function Home() {
             fontSize: "12px",
             color: "var(--text-dim)",
             fontFamily: "var(--font-jetbrains), monospace",
-            flexWrap: "wrap",
-            justifyContent: "center",
           }}
         >
           <span
@@ -291,47 +264,23 @@ export default function Home() {
               width: "7px",
               height: "7px",
               borderRadius: "50%",
-              background: clusterStatus.live ? "var(--accent-green)" : "var(--text-dim)",
-              boxShadow: clusterStatus.live ? "0 0 6px var(--accent-green)" : "none",
+              background: "var(--accent-green)",
+              boxShadow: "0 0 6px var(--accent-green)",
               flexShrink: 0,
             }}
           />
-          {clusterStatus.live ? (
-            <>
-              <span>
-                kubectl get nodes —{" "}
-                <span style={{ color: "var(--text-secondary)" }}>
-                  {clusterStatus.readyNodes}/{clusterStatus.nodes} Ready
-                </span>
-              </span>
-              <span
-                style={{
-                  background: "rgba(0,255,136,0.1)",
-                  border: "1px solid rgba(0,255,136,0.2)",
-                  borderRadius: "3px",
-                  padding: "1px 6px",
-                  color: "var(--accent-green)",
-                }}
-              >
-                {clusterStatus.k8sVersion} · {clusterStatus.runningPods} pods running
-              </span>
-            </>
-          ) : (
-            <>
-              <span>kubectl get nodes — local environment</span>
-              <span
-                style={{
-                  background: "rgba(0,212,255,0.08)",
-                  border: "1px solid rgba(0,212,255,0.2)",
-                  borderRadius: "3px",
-                  padding: "1px 6px",
-                  color: "var(--accent-cyan)",
-                }}
-              >
-                deploy to K8s for live metrics
-              </span>
-            </>
-          )}
+          <span>talent.io/v1alpha1 · SeniorEngineer/filip-csupka</span>
+          <span
+            style={{
+              background: "rgba(0,255,136,0.08)",
+              border: "1px solid rgba(0,255,136,0.2)",
+              borderRadius: "3px",
+              padding: "1px 6px",
+              color: "var(--accent-green)",
+            }}
+          >
+            status: Running
+          </span>
         </div>
 
         {/* Name */}
@@ -425,154 +374,76 @@ export default function Home() {
           </a>
         </div>
 
-        {/* Live cluster metric cards */}
+        {/* Deploy stack tiles */}
         <div
           className="fade-up delay-500"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))",
-            gap: "12px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))",
+            gap: "10px",
             marginTop: "64px",
             width: "100%",
-            maxWidth: "860px",
+            maxWidth: "900px",
           }}
         >
-          {[
-            {
-              label: "Nodes",
-              value: clusterStatus.live ? String(clusterStatus.readyNodes) : "—",
-              sub: clusterStatus.live ? `${clusterStatus.nodes} total` : "awaiting cluster",
-              ok: clusterStatus.live && clusterStatus.readyNodes === clusterStatus.nodes,
-              status: clusterStatus.live ? `${clusterStatus.readyNodes}/${clusterStatus.nodes} Ready` : "No live data",
-            },
-            {
-              label: "Pods Running",
-              value: clusterStatus.live ? String(clusterStatus.runningPods) : "—",
-              sub: clusterStatus.live ? `${clusterStatus.pods} total` : "awaiting cluster",
-              ok: clusterStatus.live && clusterStatus.runningPods > 0,
-              status: clusterStatus.live ? "Running" : "No live data",
-            },
-            {
-              label: "Namespaces",
-              value: clusterStatus.live ? String(clusterStatus.namespaces) : "—",
-              sub: clusterStatus.live ? "active" : "awaiting cluster",
-              ok: clusterStatus.live,
-              status: clusterStatus.live ? "Active" : "No live data",
-            },
-            {
-              label: "Deployments",
-              value: clusterStatus.live ? String(clusterStatus.deployments) : "—",
-              sub: clusterStatus.live ? "all namespaces" : "awaiting cluster",
-              ok: clusterStatus.live,
-              status: clusterStatus.live ? "Deployed" : "No live data",
-            },
-            {
-              label: "K8s Version",
-              value: clusterStatus.live ? clusterStatus.k8sVersion.replace("v", "") : "—",
-              sub: clusterStatus.live ? "cluster" : "awaiting cluster",
-              ok: clusterStatus.live,
-              status: clusterStatus.live ? "Live" : "No live data",
-            },
-          ].map((m) => (
-            <div
-              key={m.label}
-              className={m.ok ? "glow-green" : "glow-cyan"}
-              style={{
-                background: "var(--bg-surface)",
-                border: `1px solid ${m.ok ? "rgba(0,255,136,0.2)" : "var(--border)"}`,
-                borderRadius: "8px",
-                padding: "16px 18px",
-                textAlign: "left",
-                position: "relative",
-                overflow: "hidden",
-              }}
-            >
-              {/* live badge */}
-              {clusterStatus.live && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: "8px",
-                    right: "8px",
-                    fontSize: "9px",
-                    color: "var(--accent-green)",
-                    background: "rgba(0,255,136,0.08)",
-                    border: "1px solid rgba(0,255,136,0.2)",
-                    borderRadius: "3px",
-                    padding: "1px 5px",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  LIVE
-                </span>
-              )}
+          {DEPLOY_STACK.map((t) => {
+            const displayValue = t.label === "Kubernetes"
+              ? (k8sVersion !== "—" ? k8sVersion : "K8s")
+              : t.value!;
+            return (
               <div
+                key={t.label}
                 style={{
+                  background: "var(--bg-surface)",
+                  border: `1px solid ${t.color}22`,
+                  borderTop: `2px solid ${t.color}`,
+                  borderRadius: "8px",
+                  padding: "16px 16px 14px",
+                  textAlign: "left",
+                }}
+              >
+                <div style={{
                   fontSize: "10px",
                   color: "var(--text-dim)",
                   letterSpacing: "0.07em",
                   textTransform: "uppercase",
-                  marginBottom: "6px",
-                }}
-              >
-                {m.label}
-              </div>
-              <div
-                style={{
-                  fontSize: m.value.length > 6 ? "18px" : "26px",
+                  marginBottom: "8px",
+                }}>
+                  {t.label}
+                </div>
+                <div style={{
+                  fontSize: "18px",
                   fontWeight: 700,
-                  color: m.ok ? "var(--accent-green)" : "var(--accent-cyan)",
+                  color: t.color,
                   fontFamily: "'Orbitron', monospace",
                   lineHeight: 1,
-                  marginBottom: "4px",
+                  marginBottom: "8px",
+                  letterSpacing: "0.03em",
                   wordBreak: "break-all",
-                }}
-              >
-                {m.value}
-              </div>
-              <div style={{ fontSize: "10px", color: "var(--text-dim)" }}>{m.sub}</div>
-              <div
-                style={{
-                  marginTop: "8px",
+                }}>
+                  {displayValue}
+                </div>
+                <div style={{ fontSize: "10px", color: "var(--text-dim)", marginBottom: "4px" }}>
+                  {t.sub}
+                </div>
+                <div style={{
                   fontSize: "10px",
-                  color: m.ok ? "var(--accent-green)" : "var(--text-dim)",
+                  color: t.color,
                   display: "flex",
                   alignItems: "center",
                   gap: "4px",
-                }}
-              >
-                <span
-                  style={{
-                    width: "5px",
-                    height: "5px",
-                    borderRadius: "50%",
-                    background: m.ok ? "var(--accent-green)" : "var(--text-dim)",
-                    display: "inline-block",
-                  }}
-                />
-                {m.status}
+                  opacity: 0.7,
+                }}>
+                  <span style={{
+                    width: "5px", height: "5px", borderRadius: "50%",
+                    background: t.color, display: "inline-block", flexShrink: 0,
+                  }} />
+                  {t.role}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-
-        {/* Data freshness */}
-        {clusterStatus.live && clusterStatus.timestamp && (
-          <div
-            className="fade-in delay-600"
-            style={{
-              marginTop: "12px",
-              fontSize: "10px",
-              color: "var(--text-dim)",
-            }}
-          >
-            last synced:{" "}
-            <span style={{ color: "var(--accent-green)" }}>
-              {new Date(clusterStatus.timestamp).toUTCString()}
-            </span>
-            {" "}· refreshed on pod start
-          </div>
-        )}
 
         {/* Scroll indicator */}
         <div
@@ -644,23 +515,8 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Terminal chrome wrapper */}
+        {/* Stack grid */}
         <div className="terminal-chrome">
-          <div className="terminal-titlebar">
-            <span className="terminal-dot" style={{ background: "#FF5F57" }} />
-            <span className="terminal-dot" style={{ background: "#FFBD2E" }} />
-            <span className="terminal-dot" style={{ background: "#28C840" }} />
-            <span
-              style={{
-                marginLeft: "12px",
-                fontSize: "11px",
-                color: "var(--text-dim)",
-              }}
-            >
-              helm status — 18 releases deployed
-            </span>
-          </div>
-
           <div
             style={{
               padding: "24px",
@@ -747,32 +603,6 @@ export default function Home() {
               );
             })}
 
-            {/* Kubectl-style output footer */}
-            <div
-              style={{
-                marginTop: "20px",
-                paddingTop: "16px",
-                borderTop: "1px solid var(--border)",
-                fontSize: "11px",
-                color: "var(--text-dim)",
-                display: "flex",
-                gap: "24px",
-                flexWrap: "wrap",
-              }}
-            >
-              <span>
-                NAME: <span style={{ color: "var(--accent-cyan)" }}>filip-csupka</span>
-              </span>
-              <span>
-                NAMESPACE: <span style={{ color: "var(--accent-green)" }}>production</span>
-              </span>
-              <span>
-                STATUS: <span style={{ color: "var(--accent-green)" }}>deployed</span>
-              </span>
-              <span>
-                REVISION: <span style={{ color: "var(--accent-amber)" }}>v{APP_VERSION}</span>
-              </span>
-            </div>
           </div>
         </div>
       </section>
