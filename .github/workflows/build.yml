@@ -89,27 +89,39 @@ jobs:
           cache-from: type=gha
           cache-to:   type=gha,mode=max
 
+  deploy-gitops:
+    name: Update GitOps
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    env:
+      INFRA_REPO_TOKEN: ${{ secrets.INFRA_REPO_TOKEN }}
+
+    steps:
+      - name: Validate infra repository token
+        run: |
+          if [ -z "${INFRA_REPO_TOKEN}" ]; then
+            echo "::error::Missing repository secret INFRA_REPO_TOKEN. Create a fine-grained PAT with Contents: Read and write access to Filipcsupka/infra, then add it as a secret in this repository."
+            exit 1
+          fi
+
       - name: Set up Kustomize
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: imranismail/setup-kustomize@v2
         with:
           kustomize-version: "5.4.3"
 
       - name: Checkout infra repository
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/checkout@v5
         with:
           repository: Filipcsupka/infra
-          token: ${{ secrets.INFRA_REPO_TOKEN }}
+          token: ${{ env.INFRA_REPO_TOKEN }}
           path: infra
 
       - name: Update GitOps image tag
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         working-directory: infra/gitops/apps/cv-web/overlays/prod
         run: kustomize edit set image ghcr.io/filipcsupka/filip-cv=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${GITHUB_SHA::7}
 
       - name: Commit GitOps image tag
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         working-directory: infra
         run: |
           if git diff --quiet; then
