@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #020810;
-  --bg-surface: #0a1628;
-  --bg-elevated: #0f1e35;
-  --border: #1a3a5c;
-  --border-bright: #2a5a8c;
-  --accent-cyan: #00d4ff;
-  --accent-green: #00ff88;
-  --accent-amber: #ffb800;
-  --accent-red: #ff4757;
-  --text-primary: #e2eaf4;
-  --text-secondary: #8ba3bc;
-  --text-dim: #3d5a73;
+  --bg-primary: #03101f;
+  --bg-surface: #071b31;
+  --bg-elevated: #0c2743;
+  --border: #24577e;
+  --border-bright: #3480b6;
+  --accent-cyan: #42e0ff;
+  --accent-green: #5cffb1;
+  --accent-amber: #ffc64a;
+  --accent-red: #ff5f80;
+  --text-primary: #edf7ff;
+  --text-secondary: #a8bfd6;
+  --text-dim: #5f7f9e;
 }
 
 @theme inline {
@@ -205,4 +205,45 @@ body {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .site-nav {
+    min-height: 58px;
+    height: auto !important;
+    padding: 8px 12px !important;
+    align-items: flex-start !important;
+  }
+
+  .nav-prompt {
+    font-size: 11px !important;
+    padding-top: 4px;
+  }
+
+  .nav-actions {
+    gap: 6px !important;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .nav-links {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    max-width: 230px;
+  }
+
+  .nav-links a {
+    padding: 3px 7px !important;
+    font-size: 10px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .nav-prompt span:nth-child(4) {
+    display: none;
+  }
+
+  .nav-links {
+    max-width: 170px;
+  }
 }

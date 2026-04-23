@@ -5,16 +5,27 @@ import CV from "@/components/CV";
 import BackgroundCanvas from "@/components/BackgroundCanvas";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "dev";
+type Lang = "en" | "sk";
 
 /* ─── Typing rotator ─────────────────────────────────────── */
-const ROLES = [
-  "DevOps Engineer",
-  "SRE Specialist",
-  "Kubernetes Architect",
-  "GitOps Practitioner",
-  "Platform Engineer",
-  "OpenShift Expert",
-];
+const ROLES: Record<Lang, string[]> = {
+  en: [
+    "DevOps Engineer",
+    "SRE Specialist",
+    "Kubernetes Architect",
+    "GitOps Practitioner",
+    "Platform Engineer",
+    "OpenShift Expert",
+  ],
+  sk: [
+    "DevOps Inzinier",
+    "SRE Specialista",
+    "Kubernetes Architekt",
+    "GitOps Praktik",
+    "Platform Engineer",
+    "OpenShift Expert",
+  ],
+};
 
 function useTypingEffect(words: string[], speed = 90, pause = 2200) {
   const [display, setDisplay] = useState("");
@@ -57,63 +68,199 @@ function useTypingEffect(words: string[], speed = 90, pause = 2200) {
   return display;
 }
 
-/* ─── Stack data ─────────────────────────────────────────── */
-const STACK = [
-  { name: "Kubernetes",  abbr: "K8s",     color: "#326CE5", cat: "Orchestration" },
-  { name: "OpenShift",   abbr: "OCP",     color: "#EE0000", cat: "Orchestration" },
-  { name: "ArgoCD",      abbr: "Argo",    color: "#EF7B4D", cat: "GitOps" },
-  { name: "GitOps",      abbr: "GitOps",  color: "#00d4ff", cat: "GitOps" },
-  { name: "Terraform",   abbr: "TF",      color: "#7B42BC", cat: "IaC" },
-  { name: "Helm",        abbr: "Helm",    color: "#0F1689", cat: "Packaging" },
-  { name: "Prometheus",  abbr: "Prom",    color: "#E6522C", cat: "Observability" },
-  { name: "Grafana",     abbr: "Graf",    color: "#F46800", cat: "Observability" },
-  { name: "Alertmanager",abbr: "AM",      color: "#E6522C", cat: "Observability" },
-  { name: "Docker",      abbr: "Docker",  color: "#2496ED", cat: "Containers" },
-  { name: "Azure AKS",   abbr: "AKS",     color: "#0078D4", cat: "Cloud" },
-  { name: "AWS",         abbr: "AWS",     color: "#FF9900", cat: "Cloud" },
-  { name: "Kafka",       abbr: "Kafka",   color: "#00ff88", cat: "Streaming" },
-  { name: "MongoDB",     abbr: "Mongo",   color: "#47A248", cat: "Database" },
-  { name: "PostgreSQL",  abbr: "PG",      color: "#336791", cat: "Database" },
-  { name: "AI Agents",   abbr: "AI",      color: "#00ff88", cat: "AI/ML" },
-  { name: "CI/CD",       abbr: "CI/CD",   color: "#00d4ff", cat: "Automation" },
-  { name: "Linux",       abbr: "Linux",   color: "#FCC624", cat: "OS" },
-];
+/* ─── Page copy ──────────────────────────────────────────── */
+const COPY: Record<
+  Lang,
+  {
+    nav: { label: string; href: string }[];
+    statusLine: string;
+    statusBadge: string;
+    subtitle: string;
+    ctaExperience: string;
+    ctaGithub: string;
+    stackCommand: string;
+    stackTitle: string;
+    stackDescription: string;
+    experienceCommand: string;
+    experienceTitle: string;
+    aboutCommand: string;
+    aboutTitle: string;
+    aboutIntro: string;
+    aboutItems: { key: string; val: string; color: string }[];
+    contactCommand: string;
+    contactTitle: string;
+    contactRows: { key: string; val: string; href?: string }[];
+    footerRunning: string;
+  }
+> = {
+  en: {
+    nav: [
+      { label: "status", href: "#hero" },
+      { label: "stack", href: "#stack" },
+      { label: "experience", href: "#experience" },
+      { label: "about", href: "#about" },
+      { label: "contact", href: "#contact" },
+    ],
+    statusLine: "talent.io/v1alpha1 · UniversalSoldier/filip-csupka",
+    statusBadge: "status: Running",
+    subtitle:
+      "Building resilient Kubernetes platforms, GitOps delivery and observability while learning fast enough to look suspicious.",
+    ctaExperience: "VIEW EXPERIENCE",
+    ctaGithub: "GITHUB",
+    stackCommand: "$ kubectl get experience.stack -o wide",
+    stackTitle: "TECH STACK",
+    stackDescription: "Short version: things I have used to build, run, debug and occasionally negotiate with platforms.",
+    experienceCommand: "$ kubectl describe platform/filip-csupka",
+    experienceTitle: "EXPERIENCE",
+    aboutCommand: "$ kubectl get human filip-csupka -o wide",
+    aboutTitle: "ABOUT ME",
+    aboutIntro:
+      "Hyperactive family-first human with too many hobbies, a home Kubernetes cluster, and a healthy belief that learning starts exactly where confidence ends.",
+    aboutItems: [
+      {
+        key: "Energy",
+        val: "Hybrid athlete, every-sport enjoyer, master of none, happily over-scheduled by choice.",
+        color: "#5cffb1",
+      },
+      {
+        key: "Home lab",
+        val: "Hosts this web and my wife's web on Hetzner Kubernetes because a simple VPS would be suspiciously reasonable.",
+        color: "#42e0ff",
+      },
+      {
+        key: "Family",
+        val: "Free time belongs to my kid first. The cluster can wait; childhood does not have retry logic.",
+        color: "#ffc64a",
+      },
+      {
+        key: "AI mode",
+        val: "Since AI found me, I became a workaholic who occasionally thinks he can do everything alone. Then production politely disagrees.",
+        color: "#ff5f80",
+      },
+      {
+        key: "Typos",
+        val: "If you find a typo in the repo, it is probably already labeled with my name.",
+        color: "#a78bfa",
+      },
+    ],
+    contactCommand: "$ kubectl exec -it filip-csupka -- contact",
+    contactTitle: "CONTACT",
+    contactRows: [
+      { key: "Location", val: "Kosice, Slovakia" },
+      { key: "Role", val: "DevOps / SRE / Kubernetes Engineer" },
+      { key: "Mobile", val: "0919 235 462", href: "tel:+421919235462" },
+      { key: "Email", val: "devopssro@gmail.com", href: "mailto:devopssro@gmail.com" },
+      { key: "GitHub", val: "github.com/Filipcsupka", href: "https://github.com/Filipcsupka" },
+      { key: "LinkedIn", val: "linkedin.com/in/filip-csupka-21a26713a", href: "https://linkedin.com/in/filip-csupka-21a26713a" },
+      { key: "VevsDesign", val: "vevsdesign.sk", href: "https://vevsdesign.sk" },
+      { key: "Available", val: "Open to remote / relocation opportunities" },
+    ],
+    footerRunning: "Running on",
+  },
+  sk: {
+    nav: [
+      { label: "status", href: "#hero" },
+      { label: "stack", href: "#stack" },
+      { label: "skusenosti", href: "#experience" },
+      { label: "o mne", href: "#about" },
+      { label: "kontakt", href: "#contact" },
+    ],
+    statusLine: "talent.io/v1alpha1 · UniversalSoldier/filip-csupka",
+    statusBadge: "status: Bezi",
+    subtitle:
+      "Budujem odolne Kubernetes platformy, GitOps delivery a observabilitu a ucim sa tak rychlo, az to vyzera podozrivo.",
+    ctaExperience: "ZOBRAZIT SKUSENOSTI",
+    ctaGithub: "GITHUB",
+    stackCommand: "$ kubectl get experience.stack -o wide",
+    stackTitle: "TECH STACK",
+    stackDescription: "Kratka verzia: veci, s ktorymi staviam, prevadzkujem, debugujem a obcas vyjednavam s platformami.",
+    experienceCommand: "$ kubectl describe platform/filip-csupka",
+    experienceTitle: "SKUSENOSTI",
+    aboutCommand: "$ kubectl get human filip-csupka -o wide",
+    aboutTitle: "O MNE",
+    aboutIntro:
+      "Hyperaktivny rodinny clovek s prilis vela hobby, domacim Kubernetes clustrom a zdravym presvedcenim, ze ucenie zacina presne tam, kde konci istota.",
+    aboutItems: [
+      {
+        key: "Energia",
+        val: "Hybrid athlete, skusam skoro kazdy sport, master of none, ale s radostou a bez mierneho pudu sebazachovy.",
+        color: "#5cffb1",
+      },
+      {
+        key: "Home lab",
+        val: "Tento web aj web mojej zeny bezia na Hetzner Kubernetes, lebo jednoduchy VPS by bol podozrivo rozumny.",
+        color: "#42e0ff",
+      },
+      {
+        key: "Rodina",
+        val: "Volny cas patri hlavne mojmu dietatu. Cluster pocka; detstvo nema retry button.",
+        color: "#ffc64a",
+      },
+      {
+        key: "AI mode",
+        val: "Odkedy si ma nasla AI, som workoholik, ktory si obcas mysli, ze sam zvladne vsetko. Potom produkcia slusne nesuhlasi.",
+        color: "#ff5f80",
+      },
+      {
+        key: "Preklepy",
+        val: "Ak najdes v repo preklep, pravdepodobne uz je oznaceny mojim menom.",
+        color: "#a78bfa",
+      },
+    ],
+    contactCommand: "$ kubectl exec -it filip-csupka -- kontakt",
+    contactTitle: "KONTAKT",
+    contactRows: [
+      { key: "Lokalita", val: "Kosice, Slovensko" },
+      { key: "Rola", val: "DevOps / SRE / Kubernetes Engineer" },
+      { key: "Mobil", val: "0919 235 462", href: "tel:+421919235462" },
+      { key: "Email", val: "devopssro@gmail.com", href: "mailto:devopssro@gmail.com" },
+      { key: "GitHub", val: "github.com/Filipcsupka", href: "https://github.com/Filipcsupka" },
+      { key: "LinkedIn", val: "linkedin.com/in/filip-csupka-21a26713a", href: "https://linkedin.com/in/filip-csupka-21a26713a" },
+      { key: "VevsDesign", val: "vevsdesign.sk", href: "https://vevsdesign.sk" },
+      { key: "Dostupnost", val: "Otvoreny remote / relocation prilezitostiam" },
+    ],
+    footerRunning: "Bezi na",
+  },
+};
 
-/* ─── Nav links ──────────────────────────────────────────── */
-const NAV = [
-  { label: "status",     href: "#hero" },
-  { label: "stack",      href: "#stack" },
-  { label: "experience", href: "#experience" },
-  { label: "contact",    href: "#contact" },
-];
 
-
-/* ─── Deploy stack tiles (static + optional k8s version) ─── */
+/* ─── Hero stack tiles ───────────────────────────────────── */
 const DEPLOY_STACK = [
-  { label: "Kubernetes",     value: null,       sub: "orchestration",     role: "container runtime",   color: "#326CE5" },
-  { label: "ArgoCD",         value: "GitOps",   sub: "deployment",        role: "app delivery",        color: "#EF7B4D" },
-  { label: "Terraform",      value: "IaC",      sub: "infrastructure",    role: "cloud provisioning",  color: "#7B42BC" },
-  { label: "GitHub Actions", value: "CI/CD",    sub: "automation",        role: "build & deploy",      color: "#e2eaf4" },
-  { label: "Hetzner",        value: "Cloud",    sub: "compute",           role: "machine infra",       color: "#d50c2d" },
-  { label: "Docker",         value: "alpine",   sub: "container",         role: "image build",         color: "#2496ED" },
-  { label: "Claude + Ruflo", value: "AI",       sub: "frontend",          role: "UI design & code",    color: "#00ff88" },
+  { label: "Orchestration", value: "K8s",       sub: "Red Hat OpenShift · AKS · k3s",          role: "workloads / operators", color: "#326CE5" },
+  { label: "GitOps",        value: "ArgoCD",    sub: "sync · drift · app delivery",           role: "desired state",          color: "#EF7B4D" },
+  { label: "IaC",           value: "Terraform", sub: "Ansible · modules · state",             role: "infra as code",          color: "#7B42BC" },
+  { label: "CI/CD",         value: "Pipelines", sub: "GitHub Actions · GitLab CI",             role: "build / test / deploy",  color: "#e2eaf4" },
+  { label: "Cloud",         value: "Hetzner",   sub: "AKS · AWS · public cloud",               role: "compute / network",      color: "#d50c2d" },
+  { label: "Private Cloud", value: "Baremetal", sub: "OpenShift · HUB/SPOKE · core infra",     role: "cluster platforms",      color: "#ff5f80" },
+  { label: "Containers",    value: "Docker",    sub: "images · registries · runtime basics",   role: "container build",        color: "#2496ED" },
+  { label: "Observability", value: "Metrics",   sub: "Prometheus · Grafana · Loki · Tempo",    role: "logs / traces / alerts", color: "#F46800" },
+  { label: "Data",          value: "Kafka",     sub: "PostgreSQL · MongoDB · connectors",      role: "streams / storage",      color: "#5cffb1" },
+  { label: "Packaging",     value: "Helm",      sub: "charts · operators · Kustomize",         role: "platform packaging",     color: "#0F1689" },
+  { label: "AI Tooling",    value: "Agents",    sub: "Claude Code · Codex · MCP · skills",     role: "agentic workflows",      color: "#a78bfa" },
+  { label: "Linux",         value: "Linux",     sub: "shell · networking · troubleshooting",   role: "operating ground",       color: "#FCC624" },
 ];
 
 /* ─── Component ──────────────────────────────────────────── */
 export default function Home() {
-  const role = useTypingEffect(ROLES);
+  const [lang, setLang] = useState<Lang>("en");
+  const copy = COPY[lang];
+  const role = useTypingEffect(ROLES[lang]);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("hero");
-  const [k8sVersion, setK8sVersion] = useState<string>("—");
   const heroRef = useRef<HTMLDivElement>(null);
 
-  /* fetch k8s version written by init container at pod start */
   useEffect(() => {
-    fetch("/status.json")
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.k8sVersion) setK8sVersion(data.k8sVersion); })
-      .catch(() => {});
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("lang") === "sk") setLang("sk");
   }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    const url = new URL(window.location.href);
+    if (lang === "sk") url.searchParams.set("lang", "sk");
+    else url.searchParams.delete("lang");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [lang]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -123,7 +270,7 @@ export default function Home() {
 
   /* active nav section */
   useEffect(() => {
-    const sections = ["hero", "stack", "experience", "contact"];
+    const sections = ["hero", "stack", "experience", "about", "contact"];
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
@@ -155,6 +302,7 @@ export default function Home() {
 
       {/* ── Sticky nav ────────────────────────────────────── */}
       <nav
+        className="site-nav"
         style={{
           position: "fixed",
           top: 0,
@@ -166,6 +314,7 @@ export default function Home() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: "16px",
           background: scrolled
             ? "rgba(2,8,16,0.92)"
             : "transparent",
@@ -178,6 +327,7 @@ export default function Home() {
       >
         {/* Logo / prompt */}
         <div
+          className="nav-prompt"
           style={{
             display: "flex",
             alignItems: "center",
@@ -194,36 +344,68 @@ export default function Home() {
           <span style={{ color: "var(--accent-cyan)" }}>:~$</span>
         </div>
 
-        {/* Nav links */}
-        <div style={{ display: "flex", gap: "4px" }}>
-          {NAV.map((n) => (
-            <a
-              key={n.href}
-              href={n.href}
-              style={{
-                padding: "4px 12px",
-                borderRadius: "4px",
-                fontSize: "12px",
-                letterSpacing: "0.04em",
-                textDecoration: "none",
-                color:
-                  activeSection === n.href.replace("#", "")
-                    ? "var(--accent-cyan)"
-                    : "var(--text-dim)",
-                background:
-                  activeSection === n.href.replace("#", "")
-                    ? "rgba(0,212,255,0.08)"
-                    : "transparent",
-                border:
-                  activeSection === n.href.replace("#", "")
-                    ? "1px solid rgba(0,212,255,0.2)"
-                    : "1px solid transparent",
-                transition: "all 0.2s",
-              }}
-            >
-              {n.label}
-            </a>
-          ))}
+        <div className="nav-actions" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          {/* Nav links */}
+          <div className="nav-links" style={{ display: "flex", gap: "4px" }}>
+            {copy.nav.map((n) => (
+              <a
+                key={n.href}
+                href={n.href}
+                style={{
+                  padding: "4px 12px",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  letterSpacing: "0.04em",
+                  textDecoration: "none",
+                  color:
+                    activeSection === n.href.replace("#", "")
+                      ? "var(--accent-cyan)"
+                      : "var(--text-dim)",
+                  background:
+                    activeSection === n.href.replace("#", "")
+                      ? "rgba(0,212,255,0.08)"
+                      : "transparent",
+                  border:
+                    activeSection === n.href.replace("#", "")
+                      ? "1px solid rgba(0,212,255,0.2)"
+                      : "1px solid transparent",
+                  transition: "all 0.2s",
+                }}
+              >
+                {n.label}
+              </a>
+            ))}
+          </div>
+          <div
+            aria-label="Language selector"
+            style={{
+              display: "flex",
+              border: "1px solid rgba(0,212,255,0.24)",
+              borderRadius: "5px",
+              overflow: "hidden",
+              flexShrink: 0,
+            }}
+          >
+            {(["en", "sk"] as Lang[]).map((code) => (
+              <button
+                key={code}
+                onClick={() => setLang(code)}
+                style={{
+                  border: "none",
+                  padding: "4px 8px",
+                  minWidth: "34px",
+                  cursor: "pointer",
+                  background: lang === code ? "var(--accent-cyan)" : "rgba(2,8,16,0.62)",
+                  color: lang === code ? "var(--bg-primary)" : "var(--text-secondary)",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                }}
+              >
+                {code}
+              </button>
+            ))}
+          </div>
         </div>
       </nav>
 
@@ -269,7 +451,7 @@ export default function Home() {
               flexShrink: 0,
             }}
           />
-          <span>talent.io/v1alpha1 · SeniorEngineer/filip-csupka</span>
+          <span>{copy.statusLine}</span>
           <span
             style={{
               background: "rgba(0,255,136,0.08)",
@@ -279,7 +461,7 @@ export default function Home() {
               color: "var(--accent-green)",
             }}
           >
-            status: Running
+            {copy.statusBadge}
           </span>
         </div>
 
@@ -328,8 +510,7 @@ export default function Home() {
             marginBottom: "40px",
           }}
         >
-          Building resilient cloud-native infrastructure at scale.
-          Kubernetes, GitOps, observability — production-grade, every time.
+          {copy.subtitle}
         </p>
 
         {/* CTA buttons */}
@@ -351,10 +532,10 @@ export default function Home() {
               transition: "all 0.2s",
             }}
           >
-            VIEW EXPERIENCE
+            {copy.ctaExperience}
           </a>
           <a
-            href="#"
+            href="https://github.com/Filipcsupka"
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -370,36 +551,69 @@ export default function Home() {
               transition: "all 0.2s",
             }}
           >
-            GITHUB ↗
+            {copy.ctaGithub}
           </a>
         </div>
 
-        {/* Deploy stack tiles */}
+        {/* Hero stack tiles */}
         <div
+          id="stack"
           className="fade-up delay-500"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
             gap: "10px",
-            marginTop: "64px",
+            marginTop: "56px",
             width: "100%",
-            maxWidth: "900px",
+            maxWidth: "1100px",
+            scrollMarginTop: "90px",
           }}
         >
+          <div
+            style={{
+              gridColumn: "1 / -1",
+              textAlign: "left",
+              marginBottom: "6px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "11px",
+                color: "var(--text-dim)",
+                letterSpacing: "0.08em",
+                marginBottom: "6px",
+              }}
+            >
+              {copy.stackCommand}
+            </div>
+            <div
+              className="section-title"
+              style={{
+                fontSize: "clamp(1.1rem, 2.3vw, 1.6rem)",
+                color: "var(--text-primary)",
+                marginBottom: "6px",
+              }}
+            >
+              <span style={{ color: "var(--accent-cyan)" }}>./</span>{copy.stackTitle}
+            </div>
+            <p style={{ color: "var(--text-dim)", fontSize: "12px", lineHeight: 1.6 }}>
+              {copy.stackDescription}
+            </p>
+          </div>
           {DEPLOY_STACK.map((t) => {
-            const displayValue = t.label === "Kubernetes"
-              ? (k8sVersion !== "—" ? k8sVersion : "K8s")
-              : t.value!;
             return (
               <div
                 key={t.label}
                 style={{
-                  background: "var(--bg-surface)",
-                  border: `1px solid ${t.color}22`,
+                  background: "rgba(7, 27, 49, 0.58)",
+                  backdropFilter: "blur(8px)",
+                  border: `1px solid ${t.color}2e`,
                   borderTop: `2px solid ${t.color}`,
                   borderRadius: "8px",
-                  padding: "16px 16px 14px",
+                  padding: "14px 14px 13px",
                   textAlign: "left",
+                  minHeight: "132px",
+                  boxShadow: "0 14px 34px rgba(0, 0, 0, 0.18)",
                 }}
               >
                 <div style={{
@@ -421,9 +635,9 @@ export default function Home() {
                   letterSpacing: "0.03em",
                   wordBreak: "break-all",
                 }}>
-                  {displayValue}
+                  {t.value}
                 </div>
-                <div style={{ fontSize: "10px", color: "var(--text-dim)", marginBottom: "4px" }}>
+                <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginBottom: "10px", lineHeight: 1.45 }}>
                   {t.sub}
                 </div>
                 <div style={{
@@ -445,166 +659,6 @@ export default function Home() {
           })}
         </div>
 
-        {/* Scroll indicator */}
-        <div
-          className="float"
-          style={{
-            position: "absolute",
-            bottom: "32px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            color: "var(--text-dim)",
-            fontSize: "12px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "6px",
-          }}
-        >
-          <span>scroll</span>
-          <span style={{ fontSize: "18px" }}>↓</span>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════
-          STACK
-      ════════════════════════════════════════════════════ */}
-      <section
-        id="stack"
-        style={{
-          position: "relative",
-          zIndex: 1,
-          padding: "80px 24px",
-          maxWidth: "1100px",
-          margin: "0 auto",
-        }}
-      >
-        {/* Section header */}
-        <div style={{ marginBottom: "40px" }}>
-          <div
-            style={{
-              fontSize: "12px",
-              color: "var(--text-dim)",
-              marginBottom: "8px",
-              letterSpacing: "0.08em",
-            }}
-          >
-            $ helm list --all-namespaces
-          </div>
-          <h2
-            className="section-title"
-            style={{
-              fontSize: "clamp(1.4rem, 3vw, 2rem)",
-              color: "var(--text-primary)",
-              marginBottom: "8px",
-            }}
-          >
-            <span style={{ color: "var(--accent-cyan)" }}>./</span>TECH STACK
-          </h2>
-          <div
-            style={{
-              width: "48px",
-              height: "2px",
-              background:
-                "linear-gradient(90deg, var(--accent-cyan), transparent)",
-              marginBottom: "8px",
-            }}
-          />
-          <p style={{ color: "var(--text-dim)", fontSize: "13px" }}>
-            Production-grade toolchain — battle-tested at scale
-          </p>
-        </div>
-
-        {/* Stack grid */}
-        <div className="terminal-chrome">
-          <div
-            style={{
-              padding: "24px",
-              background: "var(--bg-surface)",
-            }}
-          >
-            {/* Category groupings */}
-            {[
-              "Orchestration",
-              "GitOps",
-              "Observability",
-              "IaC",
-              "Containers",
-              "Cloud",
-              "Streaming",
-              "Database",
-              "Automation",
-              "AI/ML",
-              "OS",
-              "Packaging",
-            ].map((cat) => {
-              const items = STACK.filter((s) => s.cat === cat);
-              if (!items.length) return null;
-              return (
-                <div
-                  key={cat}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "12px",
-                    marginBottom: "12px",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      color: "var(--text-dim)",
-                      minWidth: "110px",
-                      paddingTop: "6px",
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    {cat.toLowerCase()}:
-                  </span>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "8px",
-                    }}
-                  >
-                    {items.map((s) => (
-                      <span
-                        key={s.name}
-                        className="skill-badge"
-                        style={{
-                          padding: "4px 12px",
-                          borderRadius: "4px",
-                          fontSize: "12px",
-                          fontWeight: 500,
-                          color: s.color,
-                          borderColor: `${s.color}33`,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          cursor: "default",
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: "6px",
-                            height: "6px",
-                            borderRadius: "50%",
-                            background: s.color,
-                            flexShrink: 0,
-                          }}
-                        />
-                        {s.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-
-          </div>
-        </div>
       </section>
 
       {/* ════════════════════════════════════════════════════
@@ -629,13 +683,13 @@ export default function Home() {
               letterSpacing: "0.08em",
             }}
           >
-            $ kubectl describe pod/filip-csupka
+            {copy.experienceCommand}
           </div>
           <h2
             className="section-title"
             style={{ fontSize: "clamp(1.4rem, 3vw, 2rem)", color: "var(--text-primary)" }}
           >
-            <span style={{ color: "var(--accent-cyan)" }}>./</span>EXPERIENCE
+            <span style={{ color: "var(--accent-cyan)" }}>./</span>{copy.experienceTitle}
           </h2>
           <div
             style={{
@@ -646,7 +700,112 @@ export default function Home() {
             }}
           />
         </div>
-        <CV />
+        <CV lang={lang} />
+      </section>
+
+      {/* ════════════════════════════════════════════════════
+          ABOUT
+      ════════════════════════════════════════════════════ */}
+      <section
+        id="about"
+        style={{
+          position: "relative",
+          zIndex: 1,
+          padding: "80px 24px",
+          maxWidth: "1100px",
+          margin: "0 auto",
+        }}
+      >
+          <div style={{ marginBottom: "40px" }}>
+            <div
+              style={{
+                fontSize: "12px",
+                color: "var(--text-dim)",
+                marginBottom: "8px",
+                letterSpacing: "0.08em",
+              }}
+            >
+              {copy.aboutCommand}
+            </div>
+            <h2
+              className="section-title"
+              style={{ fontSize: "clamp(1.4rem, 3vw, 2rem)", color: "var(--text-primary)" }}
+            >
+              <span style={{ color: "var(--accent-cyan)" }}>./</span>{copy.aboutTitle}
+            </h2>
+            <div
+              style={{
+                width: "48px",
+                height: "2px",
+                background: "linear-gradient(90deg, var(--accent-cyan), transparent)",
+                marginTop: "8px",
+              }}
+            />
+          </div>
+
+          <div className="terminal-chrome">
+            <div className="terminal-titlebar">
+              <span className="terminal-dot" style={{ background: "#FF5F57" }} />
+              <span className="terminal-dot" style={{ background: "#FFBD2E" }} />
+              <span className="terminal-dot" style={{ background: "#28C840" }} />
+              <span style={{ marginLeft: "12px", fontSize: "11px", color: "var(--text-dim)" }}>
+                filip-human.yaml
+              </span>
+            </div>
+            <div
+              style={{
+                background: "var(--bg-surface)",
+                padding: "28px 32px",
+              }}
+            >
+              <p
+                style={{
+                  color: "var(--text-secondary)",
+                  fontSize: "14px",
+                  lineHeight: 1.8,
+                  maxWidth: "820px",
+                  marginBottom: "22px",
+                }}
+              >
+                {copy.aboutIntro}
+              </p>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "12px",
+                }}
+              >
+                {copy.aboutItems.map((item) => (
+                  <div
+                    key={item.key}
+                    style={{
+                      border: `1px solid ${item.color}33`,
+                      borderTop: `2px solid ${item.color}`,
+                      borderRadius: "8px",
+                      padding: "16px",
+                      background: "rgba(4, 18, 34, 0.62)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: item.color,
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        marginBottom: "8px",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {item.key}
+                    </div>
+                    <div style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: 1.7 }}>
+                      {item.val}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
       </section>
 
       {/* ════════════════════════════════════════════════════
@@ -671,13 +830,13 @@ export default function Home() {
               letterSpacing: "0.08em",
             }}
           >
-            $ kubectl exec -it filip-csupka -- bash
+            {copy.contactCommand}
           </div>
           <h2
             className="section-title"
             style={{ fontSize: "clamp(1.4rem, 3vw, 2rem)", color: "var(--text-primary)" }}
           >
-            <span style={{ color: "var(--accent-cyan)" }}>./</span>CONTACT
+            <span style={{ color: "var(--accent-cyan)" }}>./</span>{copy.contactTitle}
           </h2>
           <div
             style={{
@@ -709,13 +868,7 @@ export default function Home() {
               gap: "14px",
             }}
           >
-            {[
-              { key: "Location",  val: "Košice, Slovakia" },
-              { key: "Role",      val: "DevOps / SRE / Kubernetes Engineer" },
-              { key: "GitHub",    val: "github.com/filipcsupka", href: "#" },
-              { key: "Email",     val: "tradeopsllc@gmail.com", href: "mailto:tradeopsllc@gmail.com" },
-              { key: "Available", val: "Open to remote / relocation opportunities" },
-            ].map(({ key, val, href }) => (
+            {copy.contactRows.map(({ key, val, href }) => (
               <div
                 key={key}
                 style={{ display: "flex", gap: "16px", fontSize: "13px", flexWrap: "wrap" }}
@@ -778,11 +931,11 @@ export default function Home() {
       >
         <div style={{ display: "flex", justifyContent: "center", gap: "24px", flexWrap: "wrap" }}>
           <span>
-            © 2025 Filip Csupka
+            © 2026 Filip Csupka
           </span>
           <span style={{ color: "var(--border)" }}>|</span>
           <span>
-            Running on{" "}
+            {copy.footerRunning}{" "}
             <span style={{ color: "var(--accent-cyan)" }}>Kubernetes</span>
           </span>
           <span style={{ color: "var(--border)" }}>|</span>
