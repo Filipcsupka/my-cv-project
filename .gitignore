@@ -40,8 +40,17 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Claude / ruflo local runtime files
-.claude-flow/
+# local env and editor state
+.env.*.local
+
+# AI tooling: keep project config, ignore local runtime/state
+.claude/settings.local.json
+.claude/worktrees/
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+.claude-flow/neural/
+.claude-flow/*.log
+.claude-flow/*.tmp
+.swarm/
 CLAUDE.local.md
-AGENTS.md
-CLAUDE.md
