@@ -1,35 +1,10 @@
-# ─── Stage 1: Build ───────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM nginx:1.27-alpine
 
-WORKDIR /app
-
-# Install deps first (layer cache)
-COPY package.json package-lock.json ./
-RUN npm ci --prefer-offline
-
-# App source
-COPY . .
-
-# Version injected at build time by CI/CD
-ARG APP_VERSION=dev
-ENV NEXT_PUBLIC_APP_VERSION=${APP_VERSION}
-
-# Static export → /app/out
-RUN npm run build
-
-# ─── Stage 2: Serve ───────────────────────────────────────────────────────────
-FROM nginx:1.27-alpine AS runner
-
-# Remove default config
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Custom nginx config
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
+COPY static/ /usr/share/nginx/html
 
-# Static files from build stage
-COPY --from=builder /app/out /usr/share/nginx/html
-
-# Non-root user (security best practice for K8s)
 RUN addgroup -g 1001 -S appgroup && \
     adduser  -u 1001 -S appuser -G appgroup && \
     chown -R appuser:appgroup /var/cache/nginx /var/log/nginx /usr/share/nginx/html && \

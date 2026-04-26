@@ -2,16 +2,16 @@ name: Build & Push
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
-    branches: [main]
+    branches: ["**"]
 
 env:
   REGISTRY:   ghcr.io
   IMAGE_NAME: filipcsupka/filip-cv
 
 jobs:
-  # ── 1. Lint ──────────────────────────────────────────────────────────────────
+  # ── 1. Lint — runs on every branch / PR ──────────────────────────────────────
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -26,11 +26,12 @@ jobs:
       - run: npm ci
       - run: npm run lint
 
-  # ── 2. Build & push Docker image to GHCR ─────────────────────────────────────
+  # ── 2. Build & push Docker image — only on push to main ──────────────────────
   build:
     name: Build Image
     runs-on: ubuntu-latest
     needs: lint
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: read
       packages: write
@@ -43,14 +44,8 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          elif [[ "${GITHUB_REF}" == refs/heads/main ]]; then
-            VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-$(git rev-parse --short HEAD)")
-            VERSION="${VERSION#v}"
-          else
-            VERSION="pr-$(git rev-parse --short HEAD)"
-          fi
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-$(git rev-parse --short HEAD)")
+          VERSION="${VERSION#v}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
@@ -60,7 +55,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -74,18 +68,16 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,prefix=sha-,format=short
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            APP_VERSION=${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to:   type=gha,mode=max
 
@@ -93,7 +85,6 @@ jobs:
     name: Update GitOps
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     env:
       INFRA_REPO_TOKEN: ${{ secrets.INFRA_REPO_TOKEN }}
 
@@ -140,7 +131,6 @@ jobs:
     name: Auto-tag
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: write
     steps:
