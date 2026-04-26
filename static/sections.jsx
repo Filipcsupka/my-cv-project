@@ -7,6 +7,7 @@ function StackSection() {
   const ref = useR(null);
   const p = useElementProgress(ref);
   const t = useTick();
+  const isMobile = useIsMobile();
   const layers = D2.stackLayers;
 
   const startP = 0.05;
@@ -17,7 +18,7 @@ function StackSection() {
   return (
     <section id="stack" ref={ref} style={{
       position: "relative", zIndex: 2,
-      maxWidth: 1280, margin: "0 auto", padding: "60px 24px 100px",
+      maxWidth: 1280, margin: "0 auto", padding: "60px 16px 100px",
     }}>
       <SectionHead cmd="$ helm install platform . --create-namespace --wait" title="BUILDING THE STACK" idx="01" total="06" />
 
@@ -31,7 +32,7 @@ function StackSection() {
 
       <div style={{
         display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) minmax(360px, 580px)",
+        gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(360px, 580px)",
         gap: 36, alignItems: "start",
       }}>
         <div ref={innerRef} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -45,12 +46,14 @@ function StackSection() {
           })}
         </div>
 
-        <div style={{
-          position: "sticky", top: 80,
-          height: "min(640px, 80vh)",
-        }}>
-          <StackTower layers={layers} progress={p} startP={startP} step={step} t={t} />
-        </div>
+        {!isMobile && (
+          <div style={{
+            position: "sticky", top: 80,
+            height: "min(640px, 80vh)",
+          }}>
+            <StackTower layers={layers} progress={p} startP={startP} step={step} t={t} />
+          </div>
+        )}
       </div>
     </section>
   );
@@ -363,12 +366,13 @@ function ExperienceSection() {
   const ref = useR(null);
   const p = useElementProgress(ref);
   const [open, setOpen] = useS(0);
+  const isMobile = useIsMobile();
 
   return (
     <section id="experience" ref={ref} style={sectionStyle}>
       <SectionHead cmd="$ kubectl describe deployment/filip-csupka --show-history" title="EXPERIENCE" idx="02" total="06" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "60px 1fr", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "32px 1fr" : "60px 1fr", gap: isMobile ? 12 : 24 }}>
         <div style={{ position: "relative" }}>
           <div style={{
             position: "absolute", left: 28, top: 0, bottom: 0, width: 2,
@@ -553,7 +557,7 @@ function AboutSection() {
 
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
         gap: 16,
       }}>
         {D2.about.map((a, i) => (
@@ -773,7 +777,7 @@ function ContactSection() {
           </h3>
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))",
             gap: 12,
           }}>
             {D2.sideProjects.map((sp, i) => (
@@ -788,19 +792,20 @@ function ContactSection() {
 
 function ContactRow({ c, idx, progress }) {
   const reveal = Math.max(0, Math.min(1, (progress - 0.1) * 4 - idx * 0.08));
+  const isMobile = useIsMobile();
   const Wrap = c.href ? "a" : "div";
   return (
     <div style={{
-      display: "grid", gridTemplateColumns: "120px 16px 1fr",
-      gap: 12, padding: "6px 0",
+      display: "grid", gridTemplateColumns: isMobile ? "90px 12px 1fr" : "120px 16px 1fr",
+      gap: isMobile ? 6 : 12, padding: "6px 0",
       opacity: reveal, transform: `translateX(${(1 - reveal) * -24}px)`,
       transition: "opacity 0.2s, transform 0.2s",
     }}>
-      <span style={{ color: "#42e0ff" }}>{c.key.padEnd(10)}</span>
+      <span style={{ color: "#42e0ff", fontSize: isMobile ? 11 : 13 }}>{c.key}</span>
       <span style={{ color: "#5f7f9e" }}>:</span>
       {React.createElement(
         Wrap,
-        c.href ? { href: c.href, target: "_blank", rel: "noopener noreferrer", style: { color: "#5cffb1", textDecoration: "none", borderBottom: "1px dashed rgba(92,255,177,0.3)" } } : { style: { color: "#a8bfd6" } },
+        c.href ? { href: c.href, target: "_blank", rel: "noopener noreferrer", style: { color: "#5cffb1", textDecoration: "none", borderBottom: "1px dashed rgba(92,255,177,0.3)", fontSize: isMobile ? 11 : 13, wordBreak: "break-all" } } : { style: { color: "#a8bfd6", fontSize: isMobile ? 11 : 13 } },
         c.val
       )}
     </div>
@@ -861,7 +866,7 @@ function SideProjectCard({ sp, idx, progress, t }) {
 
 const sectionStyle = {
   position: "relative", zIndex: 2,
-  padding: "80px 24px",
+  padding: "60px 16px",
   maxWidth: 1180, margin: "0 auto",
 };
 

@@ -2,6 +2,16 @@
 const { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } = React;
 const D = window.CV_DATA;
 
+function useIsMobile(breakpoint = 768) {
+  const [mobile, setMobile] = useState(typeof window !== "undefined" ? window.innerWidth < breakpoint : false);
+  useEffect(() => {
+    const on = () => setMobile(window.innerWidth < breakpoint);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, [breakpoint]);
+  return mobile;
+}
+
 /* ─── Scroll progress hook ──────────────────────────────────── */
 function useScrollY() {
   const [y, setY] = useState(0);
@@ -260,6 +270,7 @@ function Hero() {
   const sy = useScrollY();
   const heroRef = useRef(null);
   const t = useTick();
+  const isMobile = useIsMobile();
 
   const tx = (sy * -0.05);
   const ty = (sy * 0.18);
@@ -270,19 +281,20 @@ function Hero() {
       position: "relative", minHeight: "100vh", zIndex: 2,
       display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center",
-      padding: "120px 24px 80px", textAlign: "center",
+      padding: isMobile ? "100px 16px 60px" : "120px 24px 80px", textAlign: "center",
       transform: `translateY(${ty}px)`, opacity: op,
     }}>
       <div style={{
-        display: "flex", alignItems: "center", gap: 10, marginBottom: 32,
-        fontSize: 12, color: "#5f7f9e", letterSpacing: "0.04em",
+        display: "flex", alignItems: "center", gap: 8, marginBottom: 24,
+        fontSize: 11, color: "#5f7f9e", letterSpacing: "0.04em",
+        flexWrap: "wrap", justifyContent: "center",
       }}>
         <span style={{
-          width: 8, height: 8, borderRadius: "50%",
+          width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
           background: "#5cffb1",
           boxShadow: `0 0 ${8 + Math.sin(t * 4) * 4}px #5cffb1`,
         }} />
-        <span>{D.status}</span>
+        {!isMobile && <span>{D.status}</span>}
         <span style={{
           background: "rgba(92,255,177,0.08)", border: "1px solid rgba(92,255,177,0.3)",
           borderRadius: 3, padding: "2px 8px", color: "#5cffb1",
@@ -370,9 +382,10 @@ function SectionHead({ cmd, title, idx, total }) {
         display: "flex", justifyContent: "space-between", alignItems: "baseline",
         fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#5f7f9e",
         letterSpacing: "0.08em", marginBottom: 10,
+        overflow: "hidden",
       }}>
-        <span>{cmd}</span>
-        <span>[{idx}/{total}]</span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>{cmd}</span>
+        <span style={{ flexShrink: 0 }}>[{idx}/{total}]</span>
       </div>
       <h2 style={{
         fontFamily: "'Orbitron', monospace", fontSize: "clamp(1.5rem, 3.2vw, 2.4rem)",
@@ -389,4 +402,4 @@ function SectionHead({ cmd, title, idx, total }) {
   );
 }
 
-Object.assign(window, { ClusterBackground, Hero, SectionHead, useScrollY, useElementProgress, useMouse, useTick });
+Object.assign(window, { ClusterBackground, Hero, SectionHead, useScrollY, useElementProgress, useMouse, useTick, useIsMobile });

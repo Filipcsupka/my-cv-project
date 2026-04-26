@@ -2,7 +2,7 @@
 const Root = () => {
   const sy = useScrollY();
   const t = useTick();
-  const [navOpen, setNavOpen] = React.useState(false);
+  const isMobile = useIsMobile();
 
   const [active, setActive] = React.useState("hero");
   React.useEffect(() => {
@@ -26,7 +26,7 @@ const Root = () => {
   const navItems = [
     { id: "hero", label: "status" },
     { id: "stack", label: "stack" },
-    { id: "experience", label: "experience" },
+    { id: "experience", label: "exp" },
     { id: "about", label: "about" },
     { id: "contact", label: "contact" },
   ];
@@ -38,6 +38,7 @@ const Root = () => {
     }}>
       <ClusterBackground />
 
+      {/* scroll progress bar */}
       <div style={{
         position: "fixed", top: 0, left: 0, right: 0, height: 2,
         zIndex: 100, background: "rgba(66,224,255,0.08)",
@@ -50,36 +51,40 @@ const Root = () => {
         }} />
       </div>
 
+      {/* Nav */}
       <nav style={{
         position: "fixed", top: 2, left: 0, right: 0, zIndex: 50,
-        padding: "10px 22px",
+        padding: isMobile ? "8px 14px" : "10px 22px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        gap: 14,
+        gap: 8,
         background: sy > 40 ? "rgba(2,8,16,0.92)" : "transparent",
         backdropFilter: sy > 40 ? "blur(12px)" : "none",
         borderBottom: sy > 40 ? "1px solid #24577e" : "1px solid transparent",
         transition: "all 0.3s",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: isMobile ? 11 : 13, flexShrink: 0 }}>
           <span style={{
             color: "#5cffb1",
             opacity: 0.6 + (Math.sin(t * 4) + 1) / 2 * 0.4,
           }}>●</span>
           <span style={{ color: "#42e0ff", fontWeight: 700 }}>filip</span>
-          <span style={{ color: "#5f7f9e" }}>@</span>
-          <span style={{ color: "#a8bfd6" }}>sre-cluster</span>
+          {!isMobile && <><span style={{ color: "#5f7f9e" }}>@</span>
+          <span style={{ color: "#a8bfd6" }}>sre-cluster</span></>}
           <span style={{ color: "#42e0ff" }}>:~$</span>
         </div>
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", gap: isMobile ? 2 : 4, flexWrap: "nowrap" }}>
           {navItems.map((n) => (
             <a key={n.id} href={`#${n.id}`} style={{
-              padding: "5px 12px", borderRadius: 4, fontSize: 11,
-              letterSpacing: "0.06em", textDecoration: "none",
+              padding: isMobile ? "4px 7px" : "5px 12px",
+              borderRadius: 4,
+              fontSize: isMobile ? 10 : 11,
+              letterSpacing: "0.04em", textDecoration: "none",
               color: active === n.id ? "#42e0ff" : "#5f7f9e",
               background: active === n.id ? "rgba(66,224,255,0.1)" : "transparent",
               border: active === n.id ? "1px solid rgba(66,224,255,0.3)" : "1px solid transparent",
               fontFamily: "'JetBrains Mono', monospace",
               transition: "all 0.2s",
+              whiteSpace: "nowrap",
             }}>
               {n.label}
             </a>
@@ -87,27 +92,30 @@ const Root = () => {
         </div>
       </nav>
 
-      <div style={{
-        position: "fixed", right: 18, top: "50%", transform: "translateY(-50%)",
-        zIndex: 40, display: "flex", flexDirection: "column", gap: 8,
-      }}>
-        {navItems.map((n) => (
-          <a key={n.id} href={`#${n.id}`} style={{
-            display: "block", width: 28, height: 28,
-            borderRadius: "50%",
-            border: `1px solid ${active === n.id ? "#42e0ff" : "rgba(66,224,255,0.18)"}`,
-            background: active === n.id ? "rgba(66,224,255,0.18)" : "rgba(7,27,49,0.5)",
-            position: "relative",
-            transition: "all 0.2s",
-          }} title={n.label}>
-            <span style={{
-              position: "absolute", inset: 8, borderRadius: "50%",
-              background: active === n.id ? "#42e0ff" : "rgba(66,224,255,0.3)",
-              boxShadow: active === n.id ? "0 0 10px #42e0ff" : "none",
-            }} />
-          </a>
-        ))}
-      </div>
+      {/* Side scroll dots — desktop only */}
+      {!isMobile && (
+        <div style={{
+          position: "fixed", right: 18, top: "50%", transform: "translateY(-50%)",
+          zIndex: 40, display: "flex", flexDirection: "column", gap: 8,
+        }}>
+          {navItems.map((n) => (
+            <a key={n.id} href={`#${n.id}`} style={{
+              display: "block", width: 28, height: 28,
+              borderRadius: "50%",
+              border: `1px solid ${active === n.id ? "#42e0ff" : "rgba(66,224,255,0.18)"}`,
+              background: active === n.id ? "rgba(66,224,255,0.18)" : "rgba(7,27,49,0.5)",
+              position: "relative",
+              transition: "all 0.2s",
+            }} title={n.label}>
+              <span style={{
+                position: "absolute", inset: 8, borderRadius: "50%",
+                background: active === n.id ? "#42e0ff" : "rgba(66,224,255,0.3)",
+                boxShadow: active === n.id ? "0 0 10px #42e0ff" : "none",
+              }} />
+            </a>
+          ))}
+        </div>
+      )}
 
       <Hero />
       <StackSection />
