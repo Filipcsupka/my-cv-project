@@ -46,14 +46,12 @@ function StackSection() {
           })}
         </div>
 
-        {!isMobile && (
-          <div style={{
-            position: "sticky", top: 80,
-            height: "min(640px, 80vh)",
-          }}>
-            <StackTower layers={layers} progress={p} startP={startP} step={step} t={t} />
-          </div>
-        )}
+        <div style={isMobile
+          ? { height: "min(420px, 70vw)", marginTop: 8 }
+          : { position: "sticky", top: 80, height: "min(640px, 80vh)" }
+        }>
+          <StackTower layers={layers} progress={p} startP={startP} step={step} t={t} mobile={isMobile} />
+        </div>
       </div>
     </section>
   );
@@ -150,10 +148,10 @@ function LayerLog({ layer, idx, reveal, settled, t }) {
   );
 }
 
-function StackTower({ layers, progress, startP, step, t }) {
-  const baseSlab = 64;
-  const slabH = 44;
-  const slabW = 360;
+function StackTower({ layers, progress, startP, step, t, mobile }) {
+  const baseSlab = mobile ? 44 : 64;
+  const slabH = mobile ? 32 : 44;
+  const slabW = mobile ? 240 : 360;
   const skewY = 18;
   const offsetX = 14;
 
@@ -212,6 +210,7 @@ function StackTower({ layers, progress, startP, step, t }) {
               settled={settled}
               t={t}
               scale={scale}
+              mobile={mobile}
             />
           );
         })}
@@ -263,7 +262,7 @@ function StackTower({ layers, progress, startP, step, t }) {
   );
 }
 
-function Slab({ layer, i, total, slabW, slabH, skewY, offsetX, yFromBottom, opacity, settled, t, scale }) {
+function Slab({ layer, i, total, slabW, slabH, skewY, offsetX, yFromBottom, opacity, settled, t, scale, mobile }) {
   const live = (Math.sin(t * 2 + i * 0.5) + 1) / 2;
   const xOff = (1 - settled) * (i % 2 === 0 ? -6 : 6);
 
@@ -321,22 +320,23 @@ function Slab({ layer, i, total, slabW, slabH, skewY, offsetX, yFromBottom, opac
           fontFamily: "'JetBrains Mono', monospace",
           color: "#edf7ff",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: mobile ? 6 : 10 }}>
             <span style={{
-              width: 8, height: 8, borderRadius: "50%",
+              width: mobile ? 6 : 8, height: mobile ? 6 : 8, borderRadius: "50%",
               background: layer.color,
               boxShadow: `0 0 ${4 + live * 8}px ${layer.color}`,
+              flexShrink: 0,
             }} />
-            <span style={{ fontSize: 10, color: layer.color, letterSpacing: "0.14em", fontWeight: 700 }}>
+            <span style={{ fontSize: mobile ? 8 : 10, color: layer.color, letterSpacing: "0.1em", fontWeight: 700 }}>
               {layer.tier}
             </span>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>
+            <span style={{ fontSize: mobile ? 10 : 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {layer.title}
             </span>
           </div>
-          <span style={{ fontSize: 10, color: "#5f7f9e" }}>
+          {!mobile && <span style={{ fontSize: 10, color: "#5f7f9e" }}>
             {settled > 0.6 ? "ready" : "…"}
-          </span>
+          </span>}
         </div>
 
         <div style={{
