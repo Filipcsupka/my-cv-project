@@ -15,6 +15,10 @@ window.CV_DATA = {
     "Building resilient Kubernetes platforms, GitOps delivery and observability while learning fast enough to look suspicious.",
   summary:
     "DevOps / SRE engineer focused on Kubernetes, OpenShift, GitOps and observability. I like platforms that are boring in production, fast for developers, and documented well enough that future-me does not need a detective board.",
+  resume: {
+    href: "/Filip_csupka_CV.docx",
+    label: "DOWNLOAD CV",
+  },
 
   // STACK — built bottom-up: each layer reveals as you scroll, lower layers settle in,
   // upper layers stack on top. Layers are the actual abstraction order in a platform.
@@ -225,6 +229,7 @@ window.CV_DATA = {
     { key: "Email",    val: "devopssro@gmail.com", href: "mailto:devopssro@gmail.com" },
     { key: "GitHub",   val: "github.com/Filipcsupka", href: "https://github.com/Filipcsupka" },
     { key: "LinkedIn", val: "linkedin.com/in/filip-csupka", href: "https://linkedin.com/in/filip-csupka-21a26713a" },
+    { key: "CV",       val: "Download CV (.docx)", href: "/Filip_csupka_CV.docx", download: "Filip_csupka_CV.docx" },
     { key: "Status",   val: "Open to remote / relocation" },
   ],
 

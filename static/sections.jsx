@@ -794,6 +794,23 @@ function ContactRow({ c, idx, progress }) {
   const reveal = Math.max(0, Math.min(1, (progress - 0.1) * 4 - idx * 0.08));
   const isMobile = useIsMobile();
   const Wrap = c.href ? "a" : "div";
+  const linkProps = c.href
+    ? {
+        href: c.href,
+        target: c.href.startsWith("/") ? undefined : "_blank",
+        rel: c.href.startsWith("/") ? undefined : "noopener noreferrer",
+        download: c.download,
+        style: {
+          color: "#5cffb1",
+          textDecoration: "none",
+          borderBottom: "1px dashed rgba(92,255,177,0.3)",
+          fontSize: isMobile ? 11 : 13,
+          wordBreak: "break-all",
+        },
+      }
+    : {
+        style: { color: "#a8bfd6", fontSize: isMobile ? 11 : 13 },
+      };
   return (
     <div style={{
       display: "grid", gridTemplateColumns: isMobile ? "90px 12px 1fr" : "120px 16px 1fr",
@@ -805,7 +822,7 @@ function ContactRow({ c, idx, progress }) {
       <span style={{ color: "#5f7f9e" }}>:</span>
       {React.createElement(
         Wrap,
-        c.href ? { href: c.href, target: "_blank", rel: "noopener noreferrer", style: { color: "#5cffb1", textDecoration: "none", borderBottom: "1px dashed rgba(92,255,177,0.3)", fontSize: isMobile ? 11 : 13, wordBreak: "break-all" } } : { style: { color: "#a8bfd6", fontSize: isMobile ? 11 : 13 } },
+        linkProps,
         c.val
       )}
     </div>
