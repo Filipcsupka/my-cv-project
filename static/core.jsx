@@ -339,6 +339,9 @@ function Hero() {
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
         <a href="#experience" style={ctaPrimary}>VIEW EXPERIENCE</a>
+        <a href={D.resume.href} download="Filip_csupka_CV.docx" style={ctaGhost}>
+          {D.resume.label}
+        </a>
         <a href="https://github.com/Filipcsupka" target="_blank" rel="noopener noreferrer" style={ctaGhost}>
           GITHUB →
         </a>
