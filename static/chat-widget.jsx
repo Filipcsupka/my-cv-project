@@ -26,6 +26,13 @@ function ChatWidget() {
       .catch(() => setApiOk(false));
   }, []);
 
+  // Listen for open-chat event fired by the hero CTA button
+  React.useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("open-chat", handler);
+    return () => window.removeEventListener("open-chat", handler);
+  }, []);
+
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -235,6 +242,10 @@ function ChatWidget() {
     /* blink keyframe injected once */
     React.createElement("style", null, `
       @keyframes chat-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+      @keyframes chat-pulse {
+        0%,100% { box-shadow: 0 0 22px rgba(92,255,177,0.4), 0 0 6px rgba(92,255,177,0.2); }
+        50%      { box-shadow: 0 0 36px rgba(92,255,177,0.7), 0 0 14px rgba(92,255,177,0.4); }
+      }
     `),
   );
 }

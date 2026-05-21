@@ -345,6 +345,12 @@ function Hero() {
         <a href="https://github.com/Filipcsupka" target="_blank" rel="noopener noreferrer" style={ctaGhost}>
           GITHUB →
         </a>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("open-chat"))}
+          style={ctaChat}
+        >
+          ⚡ AI CHAT
+        </button>
       </div>
 
       <div style={{
@@ -375,6 +381,14 @@ const ctaGhost = {
   textDecoration: "none", background: "transparent", color: "#42e0ff",
   letterSpacing: "0.1em", fontFamily: "'JetBrains Mono', monospace",
   border: "1px solid rgba(66,224,255,0.5)",
+};
+const ctaChat = {
+  padding: "12px 28px", borderRadius: 6, fontSize: 12, fontWeight: 700,
+  letterSpacing: "0.1em", fontFamily: "'JetBrains Mono', monospace",
+  border: "1px solid #5cffb1", background: "rgba(92,255,177,0.12)", color: "#5cffb1",
+  cursor: "pointer",
+  boxShadow: "0 0 22px rgba(92,255,177,0.4), 0 0 6px rgba(92,255,177,0.2)",
+  animation: "chat-pulse 2.4s ease-in-out infinite",
 };
 
 /* ─── Section header ──────────────────────────────────────────── */
