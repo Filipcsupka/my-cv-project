@@ -122,6 +122,7 @@ const Root = () => {
       <ExperienceSection />
       <AboutSection />
       <ContactSection />
+      <ChatWidget />
 
       <footer style={{
         position: "relative", zIndex: 2,
