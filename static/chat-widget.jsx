@@ -84,7 +84,7 @@ function ChatWidget() {
         const next = [...prev];
         const last = next[next.length - 1];
         if (last.role === "assistant")
-          next[next.length - 1] = { ...last, text: "Confabio is offline — running on an old gaming PC saving electricity. Can be started for a demo if needed 🎮" };
+          next[next.length - 1] = { ...last, text: "Halucinator is offline — running on an old gaming PC saving electricity. Can be started for a demo if needed 🎮" };
         return next;
       });
     } finally {
@@ -148,7 +148,7 @@ function ChatWidget() {
       /* header */
       React.createElement("div", { style: S.header },
         React.createElement("span", { style: { color: "#5cffb1", fontSize: 11 } }, "●"),
-        React.createElement("span", { style: { color: "#edf7ff", fontSize: 13, fontWeight: 700 } }, "Confabio"),
+        React.createElement("span", { style: { color: "#edf7ff", fontSize: 13, fontWeight: 700 } }, "Halucinator"),
         React.createElement("span", {
           style: { color: "#5f7f9e", fontSize: 11, marginLeft: "auto" }
         }, apiOk === null ? "connecting..." : apiOk ? "RTX 2070 · qwen3:8b" : "⚠ napping"),
@@ -191,7 +191,7 @@ function ChatWidget() {
                 fontSize: 10, display: "block", marginBottom: 3,
                 color: msg.role === "user" ? "#42e0ff" : "#5cffb1",
               }
-            }, msg.role === "user" ? "> you" : "$ confabio"),
+            }, msg.role === "user" ? "> you" : "$ halucinator"),
             React.createElement("span", {
               style: { fontSize: 13, color: "#edf7ff", whiteSpace: "pre-wrap", wordBreak: "break-word" }
             },
