@@ -116,10 +116,10 @@ window.CV_DATA = {
     {
       key: "ai",
       tier: "L10",
-      title: "AI / DevEx",
-      blurb: "Claude Code · Codex · MCP · agent skills",
+      title: "AI / Agents",
+      blurb: "Claude Code · Codex · MCP · LangGraph · local inference",
       color: "#a78bfa",
-      tools: ["Claude Code", "Codex", "MCP"],
+      tools: ["Claude Code", "Codex", "MCP", "LangGraph"],
       magic: "supervised by reality, no matter how loud the AI",
     },
   ],
