@@ -127,6 +127,21 @@ window.CV_DATA = {
   // EXPERIENCE TABLE
   experience: [
     {
+      id: "home-lab",
+      title: "Home lab — k3s cloud + GPU node + AI stack",
+      focus: "Hetzner k3s, home GPU worker, RAG chatbot, Kubernetes AI agent, full GitOps",
+      summary: "Personal playground for learning the AI stack hands-on — built to experiment, break things safely, and carry the patterns into future projects.",
+      highlights: [
+        "k3s control-plane on Hetzner (178.104.235.97) + NVIDIA GPU worker at home (RTX 2070) joined over Tailscale — one cluster, two continents, zero drama.",
+        "All apps deployed via ArgoCD GitOps: ArgoCD auto-syncs from infra repo with selfHeal and prune — no manual kubectl apply ever.",
+        "AI chat (ai.filipcsupka.online): RAG chatbot answering questions about me. Stack — Ollama qwen3:8b on GPU node, nomic-embed-text embeddings, ChromaDB vector store (PVC), FastAPI RAG API. Knowledge base is markdown files; update content → push → CI rebuilds ConfigMap → pod re-ingests.",
+        "k8s-ai-agent: AlertManager fires Prometheus alerts → LangGraph ReAct loop (max 120s, 3 concurrent) calls k8s API tools (pods/logs/events/nodes) → Ollama diagnoses root cause → Slack report. Phase 2 adds runbook RAG via ChromaDB.",
+        "Full observability: kube-prometheus-stack, Loki, Grafana, DCGM exporter for GPU metrics, AlertManager wired to the AI agent instead of paging a human.",
+        "CI/CD: GitHub Actions builds images → GHCR, updates image tags in infra repo, ArgoCD auto-deploys. Same pipeline for cv-web, vevsdesign.sk, ai-chat, k8s-ai-agent.",
+      ],
+      tags: ["k3s", "Hetzner", "GPU", "Tailscale", "ArgoCD", "GitOps", "Ollama", "LangGraph", "ChromaDB", "RAG", "Prometheus", "Slack", "NVIDIA", "FastAPI", "Python"],
+    },
+    {
       id: "openshift-private-cloud",
       title: "Private-cloud OpenShift operations",
       focus: "HUB/SPOKE clusters, upgrades, operators, production reliability",
