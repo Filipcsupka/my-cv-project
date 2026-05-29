@@ -147,7 +147,7 @@ function ChatWidget() {
     open && React.createElement("div", { style: S.panel },
       /* header */
       React.createElement("div", { style: S.header },
-        React.createElement("span", { style: { color: "#5cffb1", fontSize: 11 } }, "●"),
+        React.createElement("span", { style: { color: apiOk === false ? "#ff4d6d" : "#5cffb1", fontSize: 11 } }, "●"),
         React.createElement("span", { style: { color: "#edf7ff", fontSize: 13, fontWeight: 700 } }, "Halucinator"),
         React.createElement("span", {
           style: { color: "#5f7f9e", fontSize: 11, marginLeft: "auto" }
