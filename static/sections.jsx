@@ -50,7 +50,7 @@ function StackSection() {
           ? { height: "min(420px, 70vw)", marginTop: 8 }
           : { position: "sticky", top: 80, height: "min(640px, 80vh)" }
         }>
-          <DeployLog layers={layers} progress={p} startP={startP} step={step} t={t} />
+          <InfraGraph layers={layers} progress={p} startP={startP} step={step} t={t} />
         </div>
       </div>
     </section>
@@ -148,142 +148,297 @@ function LayerLog({ layer, idx, reveal, settled, t }) {
   );
 }
 
-/* ─── DEPLOY LOG — terminal panel showing per-layer helm output ───── */
-const DEPLOY_CMDS = [
-  { cmd: "helm install linux-base ./charts/linux", ns: "platform-system" },
-  { cmd: "helm install compute ./charts/metal", ns: "platform-system" },
-  { cmd: "helm install container-runtime ./charts/docker", ns: "platform-system" },
-  { cmd: "helm install k8s-control-plane ./charts/orchestration", ns: "kube-system" },
-  { cmd: "helm install helm-operator ./charts/packaging", ns: "platform-system" },
-  { cmd: "terraform apply ./infra/iac", ns: null },
-  { cmd: "helm install ci-runners ./charts/pipelines", ns: "ci-system" },
-  { cmd: "helm install argocd ./charts/gitops", ns: "argocd" },
-  { cmd: "helm install kafka-stack ./charts/data", ns: "data-platform" },
-  { cmd: "helm install kube-prometheus-stack ./charts/observability", ns: "monitoring" },
-  { cmd: "helm install ai-agents ./charts/ai", ns: "ai-platform" },
+/* ─── INFRASTRUCTURE GRAPH — live cluster topology visualization ───── */
+const LAYER_NODES = [
+  { key: "linux",       nodes: ["kernel","systemd","bash","ssh","iptables"],      tier: "L0" },
+  { key: "metal",       nodes: ["hetzner","aks-cloud","bare-metal","vpc"],        tier: "L1" },
+  { key: "containers",  nodes: ["containerd","docker","ghcr","oci-runtime"],      tier: "L2" },
+  { key: "orchestration",nodes:["control-plane","scheduler","etcd","kubelet","api-server"], tier: "L3" },
+  { key: "packaging",   nodes: ["helm","kustomize","sealed-secrets","olm"],       tier: "L4" },
+  { key: "iac",         nodes: ["terraform","ansible","state-backend"],           tier: "L5" },
+  { key: "cicd",        nodes: ["gh-actions","gitlab-ci","runner","registry"],    tier: "L6" },
+  { key: "gitops",      nodes: ["argocd","app-of-apps","sync-waves"],             tier: "L7" },
+  { key: "data",        nodes: ["kafka","postgresql","mongodb","kafka-connect"],  tier: "L8" },
+  { key: "observability",nodes:["prometheus","grafana","loki","tempo","alloy"],   tier: "L9" },
+  { key: "ai",          nodes: ["ollama","langraph","chromadb","mcp","claude"],   tier: "L10"},
 ];
 
-function DeployLog({ layers, progress, startP, step, t }) {
-  const logRef = useR(null);
+function InfraGraph({ layers, progress, startP, step, t }) {
+  const canvasRef = useR(null);
+  const nodesRef = useR([]);
+  const edgesRef = useR([]);
+  const animRef = useR(0);
+  const stateRef = useR({ progress, startP, step });
+  useE(() => { stateRef.current = { progress, startP, step }; }, [progress, startP, step]);
+
   const deployedCount = layers.filter((_, i) => {
-    const localP = startP + i * step;
-    return Math.max(0, Math.min(1, (progress - localP - 0.04) * 14)) > 0.6;
+    const lp = startP + i * step;
+    return Math.max(0, Math.min(1, (progress - lp - 0.04) * 14)) > 0.5;
   }).length;
 
-  const blink = Math.floor(t * 2) % 2 === 0;
-
   useE(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
-  }, [deployedCount]);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+
+    let W = 0, H = 0;
+    const allNodes = [];
+    const allEdges = [];
+
+    const buildGraph = () => {
+      allNodes.length = 0;
+      allEdges.length = 0;
+
+      const layerCount = LAYER_NODES.length;
+      const cx = W / 2;
+
+      LAYER_NODES.forEach((layer, li) => {
+        const layerData = layers[li];
+        const color = layerData ? layerData.color : "#42e0ff";
+        const yFrac = 0.06 + (li / (layerCount - 1)) * 0.88;
+        const y = yFrac * H;
+        const nodeCount = layer.nodes.length;
+        const spread = Math.min(W * 0.38, 200);
+
+        layer.nodes.forEach((name, ni) => {
+          const frac = nodeCount === 1 ? 0.5 : ni / (nodeCount - 1);
+          const x = cx + (frac - 0.5) * 2 * spread + (li % 2 === 0 ? 0 : 18);
+          const id = `${layer.key}:${name}`;
+          allNodes.push({
+            id, name, x, y, color,
+            layerIdx: li,
+            vx: 0, vy: 0,
+            radius: name === "control-plane" || name === "argocd" || name === "prometheus" ? 7 : 5,
+            pulse: Math.random() * Math.PI * 2,
+          });
+        });
+
+        // connect within layer
+        const layerNodesList = allNodes.filter(n => n.layerIdx === li);
+        if (layerNodesList.length > 1) {
+          for (let a = 0; a < layerNodesList.length - 1; a++) {
+            allEdges.push({ from: layerNodesList[a].id, to: layerNodesList[a + 1].id, color, layerIdx: li });
+          }
+        }
+
+        // connect to previous layer hub
+        if (li > 0) {
+          const prevNodes = allNodes.filter(n => n.layerIdx === li - 1);
+          const hub = prevNodes[Math.floor(prevNodes.length / 2)];
+          const curHub = layerNodesList[Math.floor(layerNodesList.length / 2)];
+          if (hub && curHub) {
+            allEdges.push({ from: hub.id, to: curHub.id, color, layerIdx: li, cross: true });
+          }
+        }
+      });
+
+      nodesRef.current = allNodes;
+      edgesRef.current = allEdges;
+    };
+
+    const resize = () => {
+      W = canvas.clientWidth;
+      H = canvas.clientHeight;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildGraph();
+    };
+
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+
+      const nodes = nodesRef.current;
+      const edges = edgesRef.current;
+      const now = performance.now() / 1000;
+      const { progress, startP, step } = stateRef.current;
+      const deployedCount = layers.filter((_, i) => {
+        const lp = startP + i * step;
+        return Math.max(0, Math.min(1, (progress - lp - 0.04) * 14)) > 0.5;
+      }).length;
+
+      // background scanlines
+      ctx.fillStyle = "rgba(2,13,26,0.85)";
+      ctx.fillRect(0, 0, W, H);
+      for (let y = 0; y < H; y += 3) {
+        ctx.fillStyle = "rgba(66,224,255,0.012)";
+        ctx.fillRect(0, y, W, 1);
+      }
+
+      // header
+      ctx.font = "500 10px 'JetBrains Mono', monospace";
+      ctx.fillStyle = "rgba(95,127,158,0.8)";
+      ctx.fillText("cluster.infra / topology", 14, 18);
+      ctx.fillStyle = "rgba(92,255,177,0.9)";
+      ctx.fillText(`${deployedCount}/${layers.length} layers online`, W - 14 - ctx.measureText(`${deployedCount}/${layers.length} layers online`).width, 18);
+
+      // draw edges
+      edges.forEach(edge => {
+        const fromNode = nodes.find(n => n.id === edge.from);
+        const toNode = nodes.find(n => n.id === edge.to);
+        if (!fromNode || !toNode) return;
+
+        const li = edge.layerIdx;
+        const lp = startP + li * step;
+        const settled = Math.max(0, Math.min(1, (progress - lp - 0.04) * 14));
+        if (settled < 0.1) return;
+
+        const alpha = settled * (edge.cross ? 0.22 : 0.35);
+        ctx.beginPath();
+        ctx.moveTo(fromNode.x, fromNode.y);
+        ctx.lineTo(toNode.x, toNode.y);
+        ctx.strokeStyle = edge.color + Math.round(alpha * 255).toString(16).padStart(2, "0");
+        ctx.lineWidth = edge.cross ? 1 : 1.5;
+        ctx.setLineDash(edge.cross ? [4, 5] : []);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // data flow particle
+        if (settled > 0.7 && !edge.cross) {
+          const speed = 0.35 + (li % 3) * 0.12;
+          const phase = (edge.from.charCodeAt(0) * 0.1 + now * speed) % 1;
+          const px = fromNode.x + (toNode.x - fromNode.x) * phase;
+          const py = fromNode.y + (toNode.y - fromNode.y) * phase;
+          ctx.beginPath();
+          ctx.arc(px, py, 2, 0, Math.PI * 2);
+          ctx.fillStyle = edge.color;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = edge.color;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      });
+
+      // draw nodes
+      nodes.forEach(node => {
+        const li = node.layerIdx;
+        const lp = startP + li * step;
+        const reveal = Math.max(0, Math.min(1, (progress - lp) * 12));
+        const settled = Math.max(0, Math.min(1, (progress - lp - 0.04) * 14));
+        if (reveal < 0.05) return;
+
+        const pulse = (Math.sin(now * 1.8 + node.pulse) + 1) / 2;
+        const r = node.radius;
+        const glowR = r + 4 + pulse * 6;
+
+        // outer glow
+        if (settled > 0.3) {
+          const grd = ctx.createRadialGradient(node.x, node.y, r * 0.5, node.x, node.y, glowR * 2);
+          grd.addColorStop(0, node.color + "55");
+          grd.addColorStop(1, node.color + "00");
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, glowR * 2, 0, Math.PI * 2);
+          ctx.fillStyle = grd;
+          ctx.fill();
+        }
+
+        // node circle
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = settled > 0.5 ? node.color : "#03101f";
+        ctx.strokeStyle = node.color;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.3 + reveal * 0.7;
+        ctx.fill();
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        // label
+        if (settled > 0.4) {
+          const labelAlpha = Math.min(1, (settled - 0.4) * 3);
+          ctx.font = `${r > 5 ? 9 : 8}px 'JetBrains Mono', monospace`;
+          ctx.fillStyle = node.color + Math.round(labelAlpha * 200).toString(16).padStart(2, "0");
+          ctx.textAlign = "center";
+          ctx.fillText(node.name, node.x, node.y + r + 11);
+          ctx.textAlign = "left";
+        }
+      });
+
+      // layer tier badges on the right edge
+      LAYER_NODES.forEach((layer, li) => {
+        const lp = startP + li * step;
+        const settled = Math.max(0, Math.min(1, (progress - lp - 0.04) * 14));
+        if (settled < 0.3) return;
+        const layerData = layers[li];
+        if (!layerData) return;
+        const color = layerData.color;
+        const layerNodesList = nodes.filter(n => n.layerIdx === li);
+        if (!layerNodesList.length) return;
+        const avgY = layerNodesList.reduce((s, n) => s + n.y, 0) / layerNodesList.length;
+
+        ctx.font = "700 9px 'JetBrains Mono', monospace";
+        const badge = layer.tier;
+        const bw = ctx.measureText(badge).width + 10;
+        const bx = W - bw - 6;
+        const by = avgY - 9;
+
+        ctx.fillStyle = color + "22";
+        ctx.strokeStyle = color + "55";
+        ctx.lineWidth = 1;
+        roundRect(ctx, bx, by, bw, 16, 3);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = color + Math.round(Math.min(1, (settled - 0.3) * 4) * 220).toString(16).padStart(2, "0");
+        ctx.fillText(badge, bx + 5, by + 11);
+      });
+
+      animRef.current = requestAnimationFrame(draw);
+    };
+
+    animRef.current = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      ro.disconnect();
+    };
+  }, []);
 
   return (
     <div style={{
-      width: "100%", height: "100%",
-      position: "relative",
-      borderRadius: 10,
-      border: "1px solid #1e4a6e",
-      background: "#020d1a",
-      overflow: "hidden",
-      fontFamily: "'JetBrains Mono', monospace",
-      display: "flex", flexDirection: "column",
+      width: "100%", height: "100%", position: "relative",
+      borderRadius: 10, overflow: "hidden",
+      border: "1px solid rgba(66,224,255,0.18)",
+      background: "rgba(2,13,26,0.85)",
+      backdropFilter: "blur(10px)",
+      boxShadow: "0 0 40px rgba(66,224,255,0.06), inset 0 0 80px rgba(66,224,255,0.02)",
     }}>
-      {/* title bar */}
-      <div style={{
-        padding: "8px 14px",
-        borderBottom: "1px solid #1e4a6e",
-        background: "#041525",
-        display: "flex", alignItems: "center", gap: 10,
-        flexShrink: 0,
-      }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          {["#ff5f57","#febc2e","#28c840"].map((c, i) => (
-            <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c, opacity: 0.85 }} />
-          ))}
-        </div>
-        <span style={{ fontSize: 11, color: "#5f7f9e", letterSpacing: "0.08em", marginLeft: 4 }}>
-          platform-deploy — zsh
-        </span>
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "#5cffb1" }}>
-          {deployedCount}/{layers.length} layers ✓
-        </span>
-      </div>
-
-      {/* log body */}
-      <div ref={logRef} style={{
-        flex: 1, overflowY: "auto", padding: "12px 16px",
-        display: "flex", flexDirection: "column", gap: 0,
-        scrollbarWidth: "none",
-      }}>
-        {layers.map((layer, i) => {
-          const localP = startP + i * step;
-          const reveal = Math.max(0, Math.min(1, (progress - localP) * 12));
-          const settled = Math.max(0, Math.min(1, (progress - localP - 0.04) * 14));
-          if (reveal < 0.05) return null;
-          const cmd = DEPLOY_CMDS[i] || { cmd: `helm install ${layer.key}`, ns: "platform" };
-          const deploying = reveal > 0.1 && settled < 0.6;
-          const done = settled >= 0.6;
-          const duration = (1.1 + i * 0.37).toFixed(1);
-          return (
-            <div key={layer.key} style={{
-              marginBottom: 14,
-              opacity: 0.4 + reveal * 0.6,
-              transform: `translateX(${(1 - reveal) * -10}px)`,
-              transition: "opacity 0.2s, transform 0.2s",
-            }}>
-              {/* namespace line */}
-              {cmd.ns && (
-                <div style={{ fontSize: 10, color: "#2a6a9e", marginBottom: 2 }}>
-                  {`[ns: ${cmd.ns}]`}
-                </div>
-              )}
-              {/* command */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ color: "#5cffb1", fontSize: 11, flexShrink: 0 }}>$</span>
-                <span style={{ color: "#c8e6ff", fontSize: 11, wordBreak: "break-all" }}>{cmd.cmd}</span>
-              </div>
-              {/* output lines */}
-              {reveal > 0.3 && (
-                <div style={{ marginTop: 4, paddingLeft: 14, display: "flex", flexDirection: "column", gap: 2 }}>
-                  <div style={{ fontSize: 10, color: "#3a7a9e" }}>
-                    {`Installing ${layer.title}...`}
-                  </div>
-                  <div style={{ fontSize: 10, color: "#3a7a9e" }}>
-                    {`  tools: ${layer.tools.join(", ")}`}
-                  </div>
-                  {done ? (
-                    <div style={{ fontSize: 11, color: layer.color, marginTop: 2, display: "flex", gap: 8, alignItems: "center" }}>
-                      <span>✓</span>
-                      <span style={{ fontWeight: 700 }}>{`${layer.key} deployed`}</span>
-                      <span style={{ color: "#3a7a9e", fontSize: 10 }}>{`[${duration}s]`}</span>
-                    </div>
-                  ) : deploying ? (
-                    <div style={{ fontSize: 10, color: "#ffc64a", marginTop: 2 }}>
-                      {`⸬ deploying${".".repeat(1 + (Math.floor(t * 3) % 3))}`}
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* blinking cursor */}
-        <div style={{
-          fontSize: 12, color: "#5cffb1",
-          display: "flex", alignItems: "center", gap: 6,
-        }}>
-          <span>$</span>
-          <span style={{
-            display: "inline-block", width: 8, height: 14,
-            background: blink ? "#5cffb1" : "transparent",
-            verticalAlign: "middle",
-          }} />
-        </div>
-      </div>
+      {/* corner accent lines */}
+      {[["0 0","tl"],["100% 0","tr"],["0 100%","bl"],["100% 100%","br"]].map(([pos, key]) => (
+        <div key={key} style={{
+          position: "absolute",
+          top: pos.includes("100%") && pos.endsWith("100%") ? "auto" : pos.startsWith("100%") ? "auto" : 0,
+          bottom: pos.includes("100%") && pos.endsWith("100%") ? 0 : pos.startsWith("0") && pos.endsWith("100%") ? 0 : "auto",
+          left: pos.startsWith("0") ? 0 : "auto",
+          right: pos.startsWith("100%") ? 0 : "auto",
+          width: 16, height: 16,
+          borderTop: key.includes("t") ? "2px solid rgba(66,224,255,0.5)" : "none",
+          borderBottom: key.includes("b") ? "2px solid rgba(66,224,255,0.5)" : "none",
+          borderLeft: key.includes("l") ? "2px solid rgba(66,224,255,0.5)" : "none",
+          borderRight: key.includes("r") ? "2px solid rgba(66,224,255,0.5)" : "none",
+        }} />
+      ))}
+      <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
     </div>
   );
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
 }
 
 /* ─── EXPERIENCE ──────────────────────────────────────────────── */
