@@ -15,6 +15,12 @@ function StackSection() {
 
   const innerRef = useR(null);
 
+  let activeIdx = 0;
+  layers.forEach((_, i) => {
+    const lp = startP + i * step;
+    if (Math.max(0, Math.min(1, (p - lp) * 12)) > 0.45) activeIdx = i;
+  });
+
   return (
     <section id="stack" ref={ref} style={{
       position: "relative", zIndex: 2,
@@ -41,23 +47,23 @@ function StackSection() {
             const reveal = Math.max(0, Math.min(1, (p - localP) * 12));
             const settled = Math.max(0, Math.min(1, (p - localP - 0.04) * 14));
             return (
-              <LayerLog key={layer.key} layer={layer} idx={i} reveal={reveal} settled={settled} t={t} />
+              <LayerLog key={layer.key} layer={layer} idx={i} reveal={reveal} settled={settled} t={t} active={i === activeIdx} />
             );
           })}
         </div>
 
         <div style={isMobile
-          ? { height: "min(420px, 70vw)", marginTop: 8 }
-          : { position: "sticky", top: 80, height: "min(640px, 80vh)" }
+          ? { height: "min(460px, 78vw)", marginTop: 8 }
+          : { position: "sticky", top: 80, height: "min(660px, 82vh)" }
         }>
-          <DeployLog layers={layers} progress={p} startP={startP} step={step} t={t} />
+          <StackTower layers={layers} progress={p} startP={startP} step={step} activeIdx={activeIdx} isMobile={isMobile} />
         </div>
       </div>
     </section>
   );
 }
 
-function LayerLog({ layer, idx, reveal, settled, t }) {
+function LayerLog({ layer, idx, reveal, settled, t, active }) {
   const [hover, setHover] = useS(false);
   const live = (Math.sin(t * 1.6 + idx * 0.7) + 1) / 2;
 
@@ -67,14 +73,17 @@ function LayerLog({ layer, idx, reveal, settled, t }) {
       onMouseLeave={() => setHover(false)}
       style={{
         position: "relative",
-        opacity: 0.25 + reveal * 0.75,
-        transform: `translateX(${(1 - reveal) * -28}px)`,
-        transition: "opacity 0.2s",
+        opacity: active ? 1 : 0.25 + reveal * 0.75,
+        transform: `translateX(${(1 - reveal) * -28}px) scale(${active ? 1.015 : 1})`,
+        transition: "opacity 0.25s, transform 0.25s, box-shadow 0.25s, background 0.25s",
         padding: "14px 16px 14px 22px",
-        background: settled > 0.5
+        background: active
+          ? `linear-gradient(90deg, ${layer.color}22, ${layer.color}06 55%, transparent)`
+          : settled > 0.5
           ? `linear-gradient(90deg, ${layer.color}14, transparent 60%)`
           : "transparent",
         borderRadius: 8,
+        boxShadow: active ? `inset 3px 0 0 ${layer.color}, 0 0 26px ${layer.color}1f` : "none",
       }}
     >
       <div style={{
@@ -148,137 +157,182 @@ function LayerLog({ layer, idx, reveal, settled, t }) {
   );
 }
 
-/* ─── DEPLOY LOG — terminal panel showing per-layer helm output ───── */
-const DEPLOY_CMDS = [
-  { cmd: "helm install linux-base ./charts/linux", ns: "platform-system" },
-  { cmd: "helm install compute ./charts/metal", ns: "platform-system" },
-  { cmd: "helm install container-runtime ./charts/docker", ns: "platform-system" },
-  { cmd: "helm install k8s-control-plane ./charts/orchestration", ns: "kube-system" },
-  { cmd: "helm install helm-operator ./charts/packaging", ns: "platform-system" },
-  { cmd: "terraform apply ./infra/iac", ns: null },
-  { cmd: "helm install ci-runners ./charts/pipelines", ns: "ci-system" },
-  { cmd: "helm install argocd ./charts/gitops", ns: "argocd" },
-  { cmd: "helm install kafka-stack ./charts/data", ns: "data-platform" },
-  { cmd: "helm install kube-prometheus-stack ./charts/observability", ns: "monitoring" },
-  { cmd: "helm install ai-agents ./charts/ai", ns: "ai-platform" },
-];
+/* ─── STACK TOWER — the platform these layers build, in faux-3D ───── */
+function StackTower({ layers, progress, startP, step, activeIdx, isMobile }) {
+  const t = useTick();
+  const bob = Math.sin(t * 0.7) * (isMobile ? 3 : 6);
 
-function DeployLog({ layers, progress, startP, step, t }) {
-  const logRef = useR(null);
-  const deployedCount = layers.filter((_, i) => {
-    const localP = startP + i * step;
-    return Math.max(0, Math.min(1, (progress - localP - 0.04) * 14)) > 0.6;
-  }).length;
+  const n = layers.length;
+  const gap = isMobile ? 28 : 38;
+  const plateW = isMobile ? 150 : 230;
+  const plateH = isMobile ? 92 : 132;
+  const baseScale = isMobile ? 0.8 : 1;
 
-  const blink = Math.floor(t * 2) % 2 === 0;
-
-  useE(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
-  }, [deployedCount]);
+  const settledArr = layers.map((_, i) => {
+    const lp = startP + i * step;
+    return Math.max(0, Math.min(1, (progress - lp - 0.04) * 14));
+  });
+  const deployed = settledArr.filter((s) => s > 0.5).length;
+  const active = layers[activeIdx] || layers[0];
 
   return (
     <div style={{
-      width: "100%", height: "100%",
-      position: "relative",
-      borderRadius: 10,
-      border: "1px solid #1e4a6e",
-      background: "#020d1a",
-      overflow: "hidden",
-      fontFamily: "'JetBrains Mono', monospace",
-      display: "flex", flexDirection: "column",
+      width: "100%", height: "100%", position: "relative",
+      borderRadius: 14, overflow: "hidden",
+      border: "1px solid rgba(66,224,255,0.16)",
+      background: "radial-gradient(120% 90% at 50% 16%, rgba(12,39,67,0.55), rgba(2,11,22,0.97))",
+      boxShadow: "inset 0 0 90px rgba(66,224,255,0.05)",
     }}>
-      {/* title bar */}
+      {/* status bar */}
       <div style={{
-        padding: "8px 14px",
-        borderBottom: "1px solid #1e4a6e",
-        background: "#041525",
-        display: "flex", alignItems: "center", gap: 10,
-        flexShrink: 0,
+        position: "absolute", top: 0, left: 0, right: 0, zIndex: 6,
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "10px 14px",
+        fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
+        color: "#5f7f9e", letterSpacing: "0.06em",
+        background: "linear-gradient(180deg, rgba(2,11,22,0.92), transparent)",
+        pointerEvents: "none",
       }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          {["#ff5f57","#febc2e","#28c840"].map((c, i) => (
-            <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: c, opacity: 0.85 }} />
-          ))}
-        </div>
-        <span style={{ fontSize: 11, color: "#5f7f9e", letterSpacing: "0.08em", marginLeft: 4 }}>
-          platform-deploy — zsh
-        </span>
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "#5cffb1" }}>
-          {deployedCount}/{layers.length} layers ✓
-        </span>
+        <span>⸬ platform.stack</span>
+        <span style={{ color: "#5cffb1" }}>{deployed}/{n} layers ▲</span>
       </div>
 
-      {/* log body */}
-      <div ref={logRef} style={{
-        flex: 1, overflowY: "auto", padding: "12px 16px",
-        display: "flex", flexDirection: "column", gap: 0,
-        scrollbarWidth: "none",
+      {/* iso stage */}
+      <div style={{
+        position: "absolute", inset: 0, overflow: "hidden",
+        perspective: 1400, perspectiveOrigin: "50% 40%",
       }}>
-        {layers.map((layer, i) => {
-          const localP = startP + i * step;
-          const reveal = Math.max(0, Math.min(1, (progress - localP) * 12));
-          const settled = Math.max(0, Math.min(1, (progress - localP - 0.04) * 14));
-          if (reveal < 0.05) return null;
-          const cmd = DEPLOY_CMDS[i] || { cmd: `helm install ${layer.key}`, ns: "platform" };
-          const deploying = reveal > 0.1 && settled < 0.6;
-          const done = settled >= 0.6;
-          const duration = (1.1 + i * 0.37).toFixed(1);
-          return (
-            <div key={layer.key} style={{
-              marginBottom: 14,
-              opacity: 0.4 + reveal * 0.6,
-              transform: `translateX(${(1 - reveal) * -10}px)`,
-              transition: "opacity 0.2s, transform 0.2s",
-            }}>
-              {/* namespace line */}
-              {cmd.ns && (
-                <div style={{ fontSize: 10, color: "#2a6a9e", marginBottom: 2 }}>
-                  {`[ns: ${cmd.ns}]`}
-                </div>
-              )}
-              {/* command */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ color: "#5cffb1", fontSize: 11, flexShrink: 0 }}>$</span>
-                <span style={{ color: "#c8e6ff", fontSize: 11, wordBreak: "break-all" }}>{cmd.cmd}</span>
-              </div>
-              {/* output lines */}
-              {reveal > 0.3 && (
-                <div style={{ marginTop: 4, paddingLeft: 14, display: "flex", flexDirection: "column", gap: 2 }}>
-                  <div style={{ fontSize: 10, color: "#3a7a9e" }}>
-                    {`Installing ${layer.title}...`}
-                  </div>
-                  <div style={{ fontSize: 10, color: "#3a7a9e" }}>
-                    {`  tools: ${layer.tools.join(", ")}`}
-                  </div>
-                  {done ? (
-                    <div style={{ fontSize: 11, color: layer.color, marginTop: 2, display: "flex", gap: 8, alignItems: "center" }}>
-                      <span>✓</span>
-                      <span style={{ fontWeight: 700 }}>{`${layer.key} deployed`}</span>
-                      <span style={{ color: "#3a7a9e", fontSize: 10 }}>{`[${duration}s]`}</span>
-                    </div>
-                  ) : deploying ? (
-                    <div style={{ fontSize: 10, color: "#ffc64a", marginTop: 2 }}>
-                      {`⸬ deploying${".".repeat(1 + (Math.floor(t * 3) % 3))}`}
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* blinking cursor */}
+        {/* grid floor */}
         <div style={{
-          fontSize: 12, color: "#5cffb1",
-          display: "flex", alignItems: "center", gap: 6,
+          position: "absolute", left: "50%", top: "64%",
+          width: 540, height: 540, marginLeft: -270, marginTop: -270,
+          transform: `rotateX(60deg) rotateZ(-42deg) scale(${baseScale})`,
+          backgroundImage:
+            "linear-gradient(rgba(66,224,255,0.09) 1px, transparent 1px), linear-gradient(90deg, rgba(66,224,255,0.09) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+          opacity: 0.45,
+          WebkitMaskImage: "radial-gradient(circle at 50% 50%, #000 28%, transparent 70%)",
+          maskImage: "radial-gradient(circle at 50% 50%, #000 28%, transparent 70%)",
+        }} />
+
+        {/* tower */}
+        <div style={{
+          position: "absolute", left: "50%", top: "57%",
+          transformStyle: "preserve-3d",
+          transform: `translate(-50%,-50%) scale(${baseScale}) rotateX(60deg) rotateZ(-42deg) translateZ(${bob}px)`,
         }}>
-          <span>$</span>
+          {layers.map((layer, i) => {
+            const lp = startP + i * step;
+            const reveal = Math.max(0, Math.min(1, (progress - lp) * 12));
+            const settled = settledArr[i];
+            if (reveal < 0.02) return null;
+            const isActive = i === activeIdx;
+            const z = i * gap + (isActive ? 15 : 0) + (1 - reveal) * 90;
+            const pulse = (Math.sin(t * 1.6 + i * 0.5) + 1) / 2;
+            const hot = Math.floor(pulse * layer.tools.length);
+
+            return (
+              <div key={layer.key} style={{
+                position: "absolute",
+                width: plateW, height: plateH,
+                left: -plateW / 2, top: -plateH / 2,
+                transform: `translateZ(${z}px)`,
+                transformStyle: "preserve-3d",
+                opacity: reveal,
+                transition: "opacity 0.25s",
+              }}>
+                {/* slab face */}
+                <div style={{
+                  position: "absolute", inset: 0, borderRadius: 18,
+                  background: `linear-gradient(135deg, ${layer.color}28, ${layer.color}0a 55%, ${layer.color}16)`,
+                  border: `1px solid ${layer.color}${isActive ? "" : "66"}`,
+                  boxShadow: isActive
+                    ? `0 0 38px ${layer.color}88, inset 0 0 34px ${layer.color}26`
+                    : `0 0 16px ${layer.color}30, inset 0 0 22px ${layer.color}12`,
+                  backdropFilter: "blur(3px)",
+                }} />
+                {/* top sheen */}
+                <div style={{
+                  position: "absolute", left: 0, right: 0, top: 0, height: "44%",
+                  borderRadius: "18px 18px 60% 60%",
+                  background: `linear-gradient(180deg, ${layer.color}22, transparent)`,
+                  pointerEvents: "none",
+                }} />
+                {/* tier code */}
+                <div style={{
+                  position: "absolute", left: 16, top: 11,
+                  fontFamily: "'Orbitron', monospace", fontWeight: 800,
+                  fontSize: plateW > 180 ? 17 : 13,
+                  color: layer.color, letterSpacing: "0.12em",
+                  textShadow: `0 0 12px ${layer.color}`,
+                }}>{layer.tier}</div>
+                {/* svc count */}
+                <div style={{
+                  position: "absolute", right: 14, top: 14,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 9.5, color: layer.color, opacity: 0.75,
+                }}>{layer.tools.length}×svc</div>
+                {/* tool dots */}
+                <div style={{
+                  position: "absolute", left: 16, right: 14, bottom: 27,
+                  display: "flex", gap: 7, flexWrap: "wrap",
+                }}>
+                  {layer.tools.map((tool, k) => (
+                    <span key={tool} style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: layer.color,
+                      opacity: settled > 0.5 ? (k === hot ? 1 : 0.4) : 0.18,
+                      boxShadow: k === hot ? `0 0 ${4 + pulse * 6}px ${layer.color}` : "none",
+                      transition: "opacity 0.2s",
+                    }} />
+                  ))}
+                </div>
+                {/* title */}
+                <div style={{
+                  position: "absolute", left: 16, right: 14, bottom: 9,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: plateW > 180 ? 10.5 : 8.5,
+                  color: "#cfe7ff", opacity: 0.7,
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                }}>{layer.title}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* active-layer HUD */}
+      <div style={{
+        position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6,
+        padding: "12px 16px 14px",
+        background: "linear-gradient(0deg, rgba(2,11,22,0.97), rgba(2,11,22,0.6) 70%, transparent)",
+        borderTop: `1px solid ${active.color}33`,
+        fontFamily: "'JetBrains Mono', monospace",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
           <span style={{
-            display: "inline-block", width: 8, height: 14,
-            background: blink ? "#5cffb1" : "transparent",
-            verticalAlign: "middle",
+            width: 9, height: 9, borderRadius: "50%", background: active.color,
+            boxShadow: `0 0 10px ${active.color}`,
+          }} />
+          <span style={{ color: active.color, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em" }}>
+            {active.tier}
+          </span>
+          <span style={{ color: "#edf7ff", fontSize: 13, fontFamily: "'Orbitron', monospace", fontWeight: 700, letterSpacing: "0.03em" }}>
+            {active.title}
+          </span>
+          <span style={{ marginLeft: "auto", color: "#5f7f9e", fontSize: 10 }}>
+            {String(activeIdx + 1).padStart(2, "0")}/{String(n).padStart(2, "0")}
+          </span>
+        </div>
+        <div style={{ color: "#5f7f9e", fontSize: 10.5, lineHeight: 1.5, fontStyle: "italic" }}>
+          ⸬ {active.magic}
+        </div>
+        <div style={{ marginTop: 10, height: 3, borderRadius: 2, background: "rgba(66,224,255,0.08)", overflow: "hidden" }}>
+          <div style={{
+            height: "100%", width: `${((activeIdx + 1) / n) * 100}%`,
+            background: `linear-gradient(90deg, ${active.color}, ${active.color}88)`,
+            boxShadow: `0 0 8px ${active.color}`,
+            transition: "width 0.3s",
           }} />
         </div>
       </div>
