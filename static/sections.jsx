@@ -15,6 +15,12 @@ function StackSection() {
 
   const innerRef = useR(null);
 
+  let activeIdx = 0;
+  layers.forEach((_, i) => {
+    const lp = startP + i * step;
+    if (Math.max(0, Math.min(1, (p - lp) * 12)) > 0.45) activeIdx = i;
+  });
+
   return (
     <section id="stack" ref={ref} style={{
       position: "relative", zIndex: 2,
@@ -41,23 +47,23 @@ function StackSection() {
             const reveal = Math.max(0, Math.min(1, (p - localP) * 12));
             const settled = Math.max(0, Math.min(1, (p - localP - 0.04) * 14));
             return (
-              <LayerLog key={layer.key} layer={layer} idx={i} reveal={reveal} settled={settled} t={t} />
+              <LayerLog key={layer.key} layer={layer} idx={i} reveal={reveal} settled={settled} t={t} active={i === activeIdx} />
             );
           })}
         </div>
 
         <div style={isMobile
-          ? { height: "min(420px, 70vw)", marginTop: 8 }
-          : { position: "sticky", top: 80, height: "min(640px, 80vh)" }
+          ? { height: "min(460px, 78vw)", marginTop: 8 }
+          : { position: "sticky", top: 80, height: "min(660px, 82vh)" }
         }>
-          <InfraGraph layers={layers} progress={p} startP={startP} step={step} t={t} />
+          <StackTower layers={layers} progress={p} startP={startP} step={step} activeIdx={activeIdx} isMobile={isMobile} />
         </div>
       </div>
     </section>
   );
 }
 
-function LayerLog({ layer, idx, reveal, settled, t }) {
+function LayerLog({ layer, idx, reveal, settled, t, active }) {
   const [hover, setHover] = useS(false);
   const live = (Math.sin(t * 1.6 + idx * 0.7) + 1) / 2;
 
@@ -67,14 +73,17 @@ function LayerLog({ layer, idx, reveal, settled, t }) {
       onMouseLeave={() => setHover(false)}
       style={{
         position: "relative",
-        opacity: 0.25 + reveal * 0.75,
-        transform: `translateX(${(1 - reveal) * -28}px)`,
-        transition: "opacity 0.2s",
+        opacity: active ? 1 : 0.25 + reveal * 0.75,
+        transform: `translateX(${(1 - reveal) * -28}px) scale(${active ? 1.015 : 1})`,
+        transition: "opacity 0.25s, transform 0.25s, box-shadow 0.25s, background 0.25s",
         padding: "14px 16px 14px 22px",
-        background: settled > 0.5
+        background: active
+          ? `linear-gradient(90deg, ${layer.color}22, ${layer.color}06 55%, transparent)`
+          : settled > 0.5
           ? `linear-gradient(90deg, ${layer.color}14, transparent 60%)`
           : "transparent",
         borderRadius: 8,
+        boxShadow: active ? `inset 3px 0 0 ${layer.color}, 0 0 26px ${layer.color}1f` : "none",
       }}
     >
       <div style={{
@@ -148,297 +157,187 @@ function LayerLog({ layer, idx, reveal, settled, t }) {
   );
 }
 
-/* ─── INFRASTRUCTURE GRAPH — live cluster topology visualization ───── */
-const LAYER_NODES = [
-  { key: "linux",       nodes: ["kernel","systemd","bash","ssh","iptables"],      tier: "L0" },
-  { key: "metal",       nodes: ["hetzner","aks-cloud","bare-metal","vpc"],        tier: "L1" },
-  { key: "containers",  nodes: ["containerd","docker","ghcr","oci-runtime"],      tier: "L2" },
-  { key: "orchestration",nodes:["control-plane","scheduler","etcd","kubelet","api-server"], tier: "L3" },
-  { key: "packaging",   nodes: ["helm","kustomize","sealed-secrets","olm"],       tier: "L4" },
-  { key: "iac",         nodes: ["terraform","ansible","state-backend"],           tier: "L5" },
-  { key: "cicd",        nodes: ["gh-actions","gitlab-ci","runner","registry"],    tier: "L6" },
-  { key: "gitops",      nodes: ["argocd","app-of-apps","sync-waves"],             tier: "L7" },
-  { key: "data",        nodes: ["kafka","postgresql","mongodb","kafka-connect"],  tier: "L8" },
-  { key: "observability",nodes:["prometheus","grafana","loki","tempo","alloy"],   tier: "L9" },
-  { key: "ai",          nodes: ["ollama","langraph","chromadb","mcp","claude"],   tier: "L10"},
-];
+/* ─── STACK TOWER — the platform these layers build, in faux-3D ───── */
+function StackTower({ layers, progress, startP, step, activeIdx, isMobile }) {
+  const t = useTick();
+  const bob = Math.sin(t * 0.7) * (isMobile ? 3 : 6);
 
-function InfraGraph({ layers, progress, startP, step, t }) {
-  const canvasRef = useR(null);
-  const nodesRef = useR([]);
-  const edgesRef = useR([]);
-  const animRef = useR(0);
-  const stateRef = useR({ progress, startP, step });
-  useE(() => { stateRef.current = { progress, startP, step }; }, [progress, startP, step]);
+  const n = layers.length;
+  const gap = isMobile ? 28 : 38;
+  const plateW = isMobile ? 150 : 230;
+  const plateH = isMobile ? 92 : 132;
+  const baseScale = isMobile ? 0.8 : 1;
 
-  const deployedCount = layers.filter((_, i) => {
+  const settledArr = layers.map((_, i) => {
     const lp = startP + i * step;
-    return Math.max(0, Math.min(1, (progress - lp - 0.04) * 14)) > 0.5;
-  }).length;
-
-  useE(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-
-    let W = 0, H = 0;
-    const allNodes = [];
-    const allEdges = [];
-
-    const buildGraph = () => {
-      allNodes.length = 0;
-      allEdges.length = 0;
-
-      const layerCount = LAYER_NODES.length;
-      const cx = W / 2;
-
-      LAYER_NODES.forEach((layer, li) => {
-        const layerData = layers[li];
-        const color = layerData ? layerData.color : "#42e0ff";
-        const yFrac = 0.06 + (li / (layerCount - 1)) * 0.88;
-        const y = yFrac * H;
-        const nodeCount = layer.nodes.length;
-        const spread = Math.min(W * 0.38, 200);
-
-        layer.nodes.forEach((name, ni) => {
-          const frac = nodeCount === 1 ? 0.5 : ni / (nodeCount - 1);
-          const x = cx + (frac - 0.5) * 2 * spread + (li % 2 === 0 ? 0 : 18);
-          const id = `${layer.key}:${name}`;
-          allNodes.push({
-            id, name, x, y, color,
-            layerIdx: li,
-            vx: 0, vy: 0,
-            radius: name === "control-plane" || name === "argocd" || name === "prometheus" ? 7 : 5,
-            pulse: Math.random() * Math.PI * 2,
-          });
-        });
-
-        // connect within layer
-        const layerNodesList = allNodes.filter(n => n.layerIdx === li);
-        if (layerNodesList.length > 1) {
-          for (let a = 0; a < layerNodesList.length - 1; a++) {
-            allEdges.push({ from: layerNodesList[a].id, to: layerNodesList[a + 1].id, color, layerIdx: li });
-          }
-        }
-
-        // connect to previous layer hub
-        if (li > 0) {
-          const prevNodes = allNodes.filter(n => n.layerIdx === li - 1);
-          const hub = prevNodes[Math.floor(prevNodes.length / 2)];
-          const curHub = layerNodesList[Math.floor(layerNodesList.length / 2)];
-          if (hub && curHub) {
-            allEdges.push({ from: hub.id, to: curHub.id, color, layerIdx: li, cross: true });
-          }
-        }
-      });
-
-      nodesRef.current = allNodes;
-      edgesRef.current = allEdges;
-    };
-
-    const resize = () => {
-      W = canvas.clientWidth;
-      H = canvas.clientHeight;
-      canvas.width = W * dpr;
-      canvas.height = H * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      buildGraph();
-    };
-
-    resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
-
-    const draw = () => {
-      ctx.clearRect(0, 0, W, H);
-
-      const nodes = nodesRef.current;
-      const edges = edgesRef.current;
-      const now = performance.now() / 1000;
-      const { progress, startP, step } = stateRef.current;
-      const deployedCount = layers.filter((_, i) => {
-        const lp = startP + i * step;
-        return Math.max(0, Math.min(1, (progress - lp - 0.04) * 14)) > 0.5;
-      }).length;
-
-      // background scanlines
-      ctx.fillStyle = "rgba(2,13,26,0.85)";
-      ctx.fillRect(0, 0, W, H);
-      for (let y = 0; y < H; y += 3) {
-        ctx.fillStyle = "rgba(66,224,255,0.012)";
-        ctx.fillRect(0, y, W, 1);
-      }
-
-      // header
-      ctx.font = "500 10px 'JetBrains Mono', monospace";
-      ctx.fillStyle = "rgba(95,127,158,0.8)";
-      ctx.fillText("cluster.infra / topology", 14, 18);
-      ctx.fillStyle = "rgba(92,255,177,0.9)";
-      ctx.fillText(`${deployedCount}/${layers.length} layers online`, W - 14 - ctx.measureText(`${deployedCount}/${layers.length} layers online`).width, 18);
-
-      // draw edges
-      edges.forEach(edge => {
-        const fromNode = nodes.find(n => n.id === edge.from);
-        const toNode = nodes.find(n => n.id === edge.to);
-        if (!fromNode || !toNode) return;
-
-        const li = edge.layerIdx;
-        const lp = startP + li * step;
-        const settled = Math.max(0, Math.min(1, (progress - lp - 0.04) * 14));
-        if (settled < 0.1) return;
-
-        const alpha = settled * (edge.cross ? 0.22 : 0.35);
-        ctx.beginPath();
-        ctx.moveTo(fromNode.x, fromNode.y);
-        ctx.lineTo(toNode.x, toNode.y);
-        ctx.strokeStyle = edge.color + Math.round(alpha * 255).toString(16).padStart(2, "0");
-        ctx.lineWidth = edge.cross ? 1 : 1.5;
-        ctx.setLineDash(edge.cross ? [4, 5] : []);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // data flow particle
-        if (settled > 0.7 && !edge.cross) {
-          const speed = 0.35 + (li % 3) * 0.12;
-          const phase = (edge.from.charCodeAt(0) * 0.1 + now * speed) % 1;
-          const px = fromNode.x + (toNode.x - fromNode.x) * phase;
-          const py = fromNode.y + (toNode.y - fromNode.y) * phase;
-          ctx.beginPath();
-          ctx.arc(px, py, 2, 0, Math.PI * 2);
-          ctx.fillStyle = edge.color;
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = edge.color;
-          ctx.fill();
-          ctx.shadowBlur = 0;
-        }
-      });
-
-      // draw nodes
-      nodes.forEach(node => {
-        const li = node.layerIdx;
-        const lp = startP + li * step;
-        const reveal = Math.max(0, Math.min(1, (progress - lp) * 12));
-        const settled = Math.max(0, Math.min(1, (progress - lp - 0.04) * 14));
-        if (reveal < 0.05) return;
-
-        const pulse = (Math.sin(now * 1.8 + node.pulse) + 1) / 2;
-        const r = node.radius;
-        const glowR = r + 4 + pulse * 6;
-
-        // outer glow
-        if (settled > 0.3) {
-          const grd = ctx.createRadialGradient(node.x, node.y, r * 0.5, node.x, node.y, glowR * 2);
-          grd.addColorStop(0, node.color + "55");
-          grd.addColorStop(1, node.color + "00");
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, glowR * 2, 0, Math.PI * 2);
-          ctx.fillStyle = grd;
-          ctx.fill();
-        }
-
-        // node circle
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = settled > 0.5 ? node.color : "#03101f";
-        ctx.strokeStyle = node.color;
-        ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.3 + reveal * 0.7;
-        ctx.fill();
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-
-        // label
-        if (settled > 0.4) {
-          const labelAlpha = Math.min(1, (settled - 0.4) * 3);
-          ctx.font = `${r > 5 ? 9 : 8}px 'JetBrains Mono', monospace`;
-          ctx.fillStyle = node.color + Math.round(labelAlpha * 200).toString(16).padStart(2, "0");
-          ctx.textAlign = "center";
-          ctx.fillText(node.name, node.x, node.y + r + 11);
-          ctx.textAlign = "left";
-        }
-      });
-
-      // layer tier badges on the right edge
-      LAYER_NODES.forEach((layer, li) => {
-        const lp = startP + li * step;
-        const settled = Math.max(0, Math.min(1, (progress - lp - 0.04) * 14));
-        if (settled < 0.3) return;
-        const layerData = layers[li];
-        if (!layerData) return;
-        const color = layerData.color;
-        const layerNodesList = nodes.filter(n => n.layerIdx === li);
-        if (!layerNodesList.length) return;
-        const avgY = layerNodesList.reduce((s, n) => s + n.y, 0) / layerNodesList.length;
-
-        ctx.font = "700 9px 'JetBrains Mono', monospace";
-        const badge = layer.tier;
-        const bw = ctx.measureText(badge).width + 10;
-        const bx = W - bw - 6;
-        const by = avgY - 9;
-
-        ctx.fillStyle = color + "22";
-        ctx.strokeStyle = color + "55";
-        ctx.lineWidth = 1;
-        roundRect(ctx, bx, by, bw, 16, 3);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = color + Math.round(Math.min(1, (settled - 0.3) * 4) * 220).toString(16).padStart(2, "0");
-        ctx.fillText(badge, bx + 5, by + 11);
-      });
-
-      animRef.current = requestAnimationFrame(draw);
-    };
-
-    animRef.current = requestAnimationFrame(draw);
-    return () => {
-      cancelAnimationFrame(animRef.current);
-      ro.disconnect();
-    };
-  }, []);
+    return Math.max(0, Math.min(1, (progress - lp - 0.04) * 14));
+  });
+  const deployed = settledArr.filter((s) => s > 0.5).length;
+  const active = layers[activeIdx] || layers[0];
 
   return (
     <div style={{
       width: "100%", height: "100%", position: "relative",
-      borderRadius: 10, overflow: "hidden",
-      border: "1px solid rgba(66,224,255,0.18)",
-      background: "rgba(2,13,26,0.85)",
-      backdropFilter: "blur(10px)",
-      boxShadow: "0 0 40px rgba(66,224,255,0.06), inset 0 0 80px rgba(66,224,255,0.02)",
+      borderRadius: 14, overflow: "hidden",
+      border: "1px solid rgba(66,224,255,0.16)",
+      background: "radial-gradient(120% 90% at 50% 16%, rgba(12,39,67,0.55), rgba(2,11,22,0.97))",
+      boxShadow: "inset 0 0 90px rgba(66,224,255,0.05)",
     }}>
-      {/* corner accent lines */}
-      {[["0 0","tl"],["100% 0","tr"],["0 100%","bl"],["100% 100%","br"]].map(([pos, key]) => (
-        <div key={key} style={{
-          position: "absolute",
-          top: pos.includes("100%") && pos.endsWith("100%") ? "auto" : pos.startsWith("100%") ? "auto" : 0,
-          bottom: pos.includes("100%") && pos.endsWith("100%") ? 0 : pos.startsWith("0") && pos.endsWith("100%") ? 0 : "auto",
-          left: pos.startsWith("0") ? 0 : "auto",
-          right: pos.startsWith("100%") ? 0 : "auto",
-          width: 16, height: 16,
-          borderTop: key.includes("t") ? "2px solid rgba(66,224,255,0.5)" : "none",
-          borderBottom: key.includes("b") ? "2px solid rgba(66,224,255,0.5)" : "none",
-          borderLeft: key.includes("l") ? "2px solid rgba(66,224,255,0.5)" : "none",
-          borderRight: key.includes("r") ? "2px solid rgba(66,224,255,0.5)" : "none",
+      {/* status bar */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, zIndex: 6,
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "10px 14px",
+        fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
+        color: "#5f7f9e", letterSpacing: "0.06em",
+        background: "linear-gradient(180deg, rgba(2,11,22,0.92), transparent)",
+        pointerEvents: "none",
+      }}>
+        <span>⸬ platform.stack</span>
+        <span style={{ color: "#5cffb1" }}>{deployed}/{n} layers ▲</span>
+      </div>
+
+      {/* iso stage */}
+      <div style={{
+        position: "absolute", inset: 0, overflow: "hidden",
+        perspective: 1400, perspectiveOrigin: "50% 40%",
+      }}>
+        {/* grid floor */}
+        <div style={{
+          position: "absolute", left: "50%", top: "64%",
+          width: 540, height: 540, marginLeft: -270, marginTop: -270,
+          transform: `rotateX(60deg) rotateZ(-42deg) scale(${baseScale})`,
+          backgroundImage:
+            "linear-gradient(rgba(66,224,255,0.09) 1px, transparent 1px), linear-gradient(90deg, rgba(66,224,255,0.09) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+          opacity: 0.45,
+          WebkitMaskImage: "radial-gradient(circle at 50% 50%, #000 28%, transparent 70%)",
+          maskImage: "radial-gradient(circle at 50% 50%, #000 28%, transparent 70%)",
         }} />
-      ))}
-      <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
+
+        {/* tower */}
+        <div style={{
+          position: "absolute", left: "50%", top: "57%",
+          transformStyle: "preserve-3d",
+          transform: `translate(-50%,-50%) scale(${baseScale}) rotateX(60deg) rotateZ(-42deg) translateZ(${bob}px)`,
+        }}>
+          {layers.map((layer, i) => {
+            const lp = startP + i * step;
+            const reveal = Math.max(0, Math.min(1, (progress - lp) * 12));
+            const settled = settledArr[i];
+            if (reveal < 0.02) return null;
+            const isActive = i === activeIdx;
+            const z = i * gap + (isActive ? 15 : 0) + (1 - reveal) * 90;
+            const pulse = (Math.sin(t * 1.6 + i * 0.5) + 1) / 2;
+            const hot = Math.floor(pulse * layer.tools.length);
+
+            return (
+              <div key={layer.key} style={{
+                position: "absolute",
+                width: plateW, height: plateH,
+                left: -plateW / 2, top: -plateH / 2,
+                transform: `translateZ(${z}px)`,
+                transformStyle: "preserve-3d",
+                opacity: reveal,
+                transition: "opacity 0.25s",
+              }}>
+                {/* slab face */}
+                <div style={{
+                  position: "absolute", inset: 0, borderRadius: 18,
+                  background: `linear-gradient(135deg, ${layer.color}28, ${layer.color}0a 55%, ${layer.color}16)`,
+                  border: `1px solid ${layer.color}${isActive ? "" : "66"}`,
+                  boxShadow: isActive
+                    ? `0 0 38px ${layer.color}88, inset 0 0 34px ${layer.color}26`
+                    : `0 0 16px ${layer.color}30, inset 0 0 22px ${layer.color}12`,
+                  backdropFilter: "blur(3px)",
+                }} />
+                {/* top sheen */}
+                <div style={{
+                  position: "absolute", left: 0, right: 0, top: 0, height: "44%",
+                  borderRadius: "18px 18px 60% 60%",
+                  background: `linear-gradient(180deg, ${layer.color}22, transparent)`,
+                  pointerEvents: "none",
+                }} />
+                {/* tier code */}
+                <div style={{
+                  position: "absolute", left: 16, top: 11,
+                  fontFamily: "'Orbitron', monospace", fontWeight: 800,
+                  fontSize: plateW > 180 ? 17 : 13,
+                  color: layer.color, letterSpacing: "0.12em",
+                  textShadow: `0 0 12px ${layer.color}`,
+                }}>{layer.tier}</div>
+                {/* svc count */}
+                <div style={{
+                  position: "absolute", right: 14, top: 14,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 9.5, color: layer.color, opacity: 0.75,
+                }}>{layer.tools.length}×svc</div>
+                {/* tool dots */}
+                <div style={{
+                  position: "absolute", left: 16, right: 14, bottom: 27,
+                  display: "flex", gap: 7, flexWrap: "wrap",
+                }}>
+                  {layer.tools.map((tool, k) => (
+                    <span key={tool} style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: layer.color,
+                      opacity: settled > 0.5 ? (k === hot ? 1 : 0.4) : 0.18,
+                      boxShadow: k === hot ? `0 0 ${4 + pulse * 6}px ${layer.color}` : "none",
+                      transition: "opacity 0.2s",
+                    }} />
+                  ))}
+                </div>
+                {/* title */}
+                <div style={{
+                  position: "absolute", left: 16, right: 14, bottom: 9,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: plateW > 180 ? 10.5 : 8.5,
+                  color: "#cfe7ff", opacity: 0.7,
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                }}>{layer.title}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* active-layer HUD */}
+      <div style={{
+        position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 6,
+        padding: "12px 16px 14px",
+        background: "linear-gradient(0deg, rgba(2,11,22,0.97), rgba(2,11,22,0.6) 70%, transparent)",
+        borderTop: `1px solid ${active.color}33`,
+        fontFamily: "'JetBrains Mono', monospace",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+          <span style={{
+            width: 9, height: 9, borderRadius: "50%", background: active.color,
+            boxShadow: `0 0 10px ${active.color}`,
+          }} />
+          <span style={{ color: active.color, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em" }}>
+            {active.tier}
+          </span>
+          <span style={{ color: "#edf7ff", fontSize: 13, fontFamily: "'Orbitron', monospace", fontWeight: 700, letterSpacing: "0.03em" }}>
+            {active.title}
+          </span>
+          <span style={{ marginLeft: "auto", color: "#5f7f9e", fontSize: 10 }}>
+            {String(activeIdx + 1).padStart(2, "0")}/{String(n).padStart(2, "0")}
+          </span>
+        </div>
+        <div style={{ color: "#5f7f9e", fontSize: 10.5, lineHeight: 1.5, fontStyle: "italic" }}>
+          ⸬ {active.magic}
+        </div>
+        <div style={{ marginTop: 10, height: 3, borderRadius: 2, background: "rgba(66,224,255,0.08)", overflow: "hidden" }}>
+          <div style={{
+            height: "100%", width: `${((activeIdx + 1) / n) * 100}%`,
+            background: `linear-gradient(90deg, ${active.color}, ${active.color}88)`,
+            boxShadow: `0 0 8px ${active.color}`,
+            transition: "width 0.3s",
+          }} />
+        </div>
+      </div>
     </div>
   );
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
 }
 
 /* ─── EXPERIENCE ──────────────────────────────────────────────── */
